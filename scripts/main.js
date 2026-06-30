@@ -7,7 +7,7 @@ import { Physics } from './physics';
 import { setupUI } from './ui';
 import { ModelLoader } from './modelLoader';
 import { Avatar } from './avatar';
-import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode } from './multiplayer';
+import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed } from './multiplayer';
 
 // UI Setup
 const stats = new Stats();
@@ -237,31 +237,80 @@ document.getElementById('btn-play').addEventListener('click', async () => {
   avatarMenu.style.display = 'none';
 
   if (gameMode === 'multiplayer') {
-    // Shared seed: first player sets it, others read it. Regenerate world to match.
+    // Shared seed: first player sets it (and becomes host), others read it.
+    let amCreator = false;
     try {
       const seed = await resolveSharedSeed(world.params.seed);
+      amCreator = isHost;
       if (seed !== world.params.seed) {
         world.setSeed(seed);
       }
     } catch (err) {
       console.error('[mp] seed resolve failed, using local seed:', err);
     }
-    setupMultiplayerHost(false); // hide host button in MP
+    setupMultiplayerHost(false); // hide singleplayer host button in MP
+
+    // If we CREATED the room (not joined via link), show the share screen first.
+    if (amCreator && !roomExistsInUrl()) {
+      showShareScreen();
+      return; // wait for "Start Playing"
+    }
   } else {
-    // Singleplayer: stays fully offline. Show the Host button.
-    setupMultiplayerHost(true);
+    setupMultiplayerHost(true); // singleplayer: show Host button
   }
 
-  // Reveal the in-game start overlay ("press any key to start").
-  document.getElementById('overlay').style.visibility = 'visible';
+  enterGame();
 });
+
+function enterGame() {
+  document.getElementById('overlay').style.visibility = 'visible';
+}
+
+// --- Share screen (room creators) ---
+function showShareScreen() {
+  const shareMenu = document.getElementById('share-menu');
+  const input = document.getElementById('share-link-input');
+  input.value = window.location.href; // already has ?room=XXXX
+  shareMenu.style.display = 'flex';
+
+  document.getElementById('copy-link-btn').onclick = () => {
+    input.select();
+    navigator.clipboard?.writeText(input.value);
+    const btn = document.getElementById('copy-link-btn').querySelector('.menu-btn-title');
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  };
+
+  document.getElementById('start-playing-btn').onclick = () => {
+    shareMenu.style.display = 'none';
+    enterGame();
+  };
+}
 
 // Join the multiplayer room the first time the player locks in (starts playing).
 player.controls.addEventListener('lock', () => {
   if (gameMode === 'multiplayer' && !mpJoined) {
     mpJoined = true;
     initMultiplayer(scene, world, player);
+    // Show the Close Room button only for the host.
+    if (isHost) {
+      const btn = document.getElementById('close-room-btn');
+      btn.style.display = 'block';
+      btn.onclick = () => {
+        if (confirm('Close this room for everyone?')) {
+          closeRoom();
+          window.location.href = window.location.origin; // back to menu
+        }
+      };
+    }
   }
+});
+
+// If the room gets closed (by host) while we're in it, return to the menu.
+setOnRoomClosed(() => {
+  alert('The room was closed by the host.');
+  window.location.href = window.location.origin;
 });
 
 // Host button (singleplayer read-only sharing) is wired in setupHostButton().

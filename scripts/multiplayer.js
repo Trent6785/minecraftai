@@ -1,6 +1,6 @@
 // Multiplayer: sync player positions and render other players as avatars.
 import { db } from './firebase';
-import { ref, set, get, update, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect } from 'firebase/database';
+import { ref, set, get, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect } from 'firebase/database';
 import { Avatar } from './avatar';
 
 function getRoomCode() {
@@ -33,28 +33,48 @@ let joined = false;
 let playerRef = null;
 let playersRef = null;
 let seedRef = null;
+let hostRef = null;
+let roomRef = null;
 
 function buildRefs() {
   playerRef = ref(db, `rooms/${roomCode}/players/${playerId}`);
   playersRef = ref(db, `rooms/${roomCode}/players`);
   seedRef = ref(db, `rooms/${roomCode}/seed`);
+  hostRef = ref(db, `rooms/${roomCode}/host`);
+  roomRef = ref(db, `rooms/${roomCode}`);
 }
+
+export let isHost = false;
+
+// Callback the game sets, invoked when the room is closed by the host (or
+// vanishes) so the game can boot the player back to the menu.
+let onRoomClosed = null;
+export function setOnRoomClosed(cb) { onRoomClosed = cb; }
 
 /**
  * Resolve the shared seed for this room. If the room already has a seed
- * (someone created it first), returns that. Otherwise writes `mySeed` as the
- * room's seed and returns it. Call BEFORE generating the world.
+ * (someone created it first), returns that and we are NOT the host. Otherwise
+ * writes `mySeed` as the room's seed, claims host, and returns it.
  * @returns {Promise<number>}
  */
 export async function resolveSharedSeed(mySeed) {
   buildRefs();
   const snap = await get(seedRef);
   if (snap.exists()) {
-    return snap.val();           // join existing world
+    isHost = false;
+    return snap.val();           // joining existing world
   } else {
-    await set(seedRef, mySeed);  // we're the creator
+    await set(seedRef, mySeed);  // we're the creator -> host
+    await set(hostRef, playerId);
+    isHost = true;
     return mySeed;
   }
+}
+
+/** Host action: close the room for everyone and delete it. */
+export function closeRoom() {
+  if (!isHost || !roomRef) return;
+  remove(roomRef);
 }
 
 const remotePlayers = new Map();
@@ -122,6 +142,32 @@ export function initMultiplayer(scene, world, localPlayer) {
       rp.avatar.dispose();
       remotePlayers.delete(data.id);
       console.log(`[mp] player left: ${data.id}`);
+    }
+  });
+
+  // --- Detect the room being closed (host force-close, or it vanishing) ---
+  onValue(seedRef, (snap) => {
+    if (!snap.exists() && joined) {
+      // Seed gone => room was deleted. Boot back to menu.
+      console.log('[mp] room closed');
+      if (onRoomClosed) onRoomClosed();
+    }
+  });
+
+  // --- Auto-cleanup: if we're the last player to leave, delete the room ---
+  // When our tab disconnects, also try to remove the whole room IF empty.
+  // We check the player count and, if we're the only one, schedule room
+  // removal on disconnect.
+  onValue(playersRef, (snap) => {
+    const players = snap.val() || {};
+    const count = Object.keys(players).length;
+    if (count <= 1) {
+      // We're (about to be) the last one — clean up the whole room on disconnect.
+      onDisconnect(roomRef).remove();
+    } else {
+      // Others are here; only remove our own entry on disconnect.
+      onDisconnect(roomRef).cancel();
+      onDisconnect(playerRef).remove();
     }
   });
 }
