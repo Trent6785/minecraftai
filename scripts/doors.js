@@ -104,8 +104,10 @@ export class DoorManager {
   toggle(door) {
     if (!door) return;
     door.open = !door.open;
-    // Open swings 90° around the hinge — opens to the LEFT.
-    const swing = (door.hinge === 'left') ? -Math.PI / 2 : Math.PI / 2;
+    // SWING_DIRECTION controls which way the door opens. If it opens the wrong
+    // way, flip this single value between +1 and -1.
+    const SWING_DIRECTION = +1;
+    const swing = SWING_DIRECTION * (Math.PI / 2);
     const base = FACING_YAW[door.facing] ?? 0;
     door.pivot.rotation.y = door.open ? base + swing : base;
   }
