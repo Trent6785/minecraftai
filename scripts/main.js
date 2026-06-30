@@ -248,11 +248,15 @@ function getSelfAvatarType() {
 
 // Update the self-avatar to follow the player, and position the corner camera.
 let _lastSelfPos = new THREE.Vector3();
+const _lookDir = new THREE.Vector3();
 function updateCornerView(dt) {
   if (!selfAvatar || !selfAvatar.ready) return;
 
-  // Player yaw from the camera.
-  const yaw = player.camera.rotation.y;
+  // Derive horizontal facing (yaw) from the camera's actual look direction.
+  // PointerLockControls bakes pitch into camera.rotation, so reading rotation.y
+  // directly is unreliable — use the world direction vector instead.
+  player.camera.getWorldDirection(_lookDir);
+  const yaw = Math.atan2(_lookDir.x, _lookDir.z);
   const feetY = player.position.y - player.height;
 
   // Detect real movement (horizontal distance moved this frame).
@@ -261,7 +265,7 @@ function updateCornerView(dt) {
   const movedSq = dx * dx + dz * dz;
   _lastSelfPos.set(player.position.x, player.position.y, player.position.z);
 
-  // Snap avatar directly to the player (no interpolation needed for self).
+  // Snap avatar directly to the player, facing the look direction.
   selfAvatar.root.position.set(player.position.x, feetY, player.position.z);
   selfAvatar.root.rotation.y = yaw;
   selfAvatar.targetPosition.set(player.position.x, feetY, player.position.z);
@@ -269,12 +273,13 @@ function updateCornerView(dt) {
   if (selfAvatar.mixer) selfAvatar.mixer.update(dt);
   selfAvatar.setMoving(movedSq > 0.0001);
 
-  // Corner camera sits behind and above the player, looking at them.
+  // Corner camera sits behind and above the player, looking along their facing.
+  // "Behind" = opposite the look direction.
   const back = 4, up = 2.5;
   cornerCamera.position.set(
-    player.position.x + Math.sin(yaw) * back,
+    player.position.x - _lookDir.x * back,
     player.position.y + up,
-    player.position.z + Math.cos(yaw) * back
+    player.position.z - _lookDir.z * back
   );
   cornerCamera.lookAt(player.position.x, player.position.y - 0.3, player.position.z);
 }
