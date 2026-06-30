@@ -358,6 +358,11 @@ export class World extends THREE.Group {
       this.hideBlock(x, y + 1, z);
       this.hideBlock(x, y, z - 1);
       this.hideBlock(x, y, z + 1);
+
+      // Broadcast this edit to other players (unless we're applying a remote one).
+      if (this.onLocalEdit && !this._applyingRemote) {
+        this.onLocalEdit(x, y, z, blockId);
+      }
     }
   }
 
@@ -388,7 +393,25 @@ export class World extends THREE.Group {
       this.revealBlock(x, y + 1, z);
       this.revealBlock(x, y, z - 1);
       this.revealBlock(x, y, z + 1);
+
+      // Broadcast deletion (blockId 0 = empty) unless applying a remote edit.
+      if (this.onLocalEdit && !this._applyingRemote) {
+        this.onLocalEdit(x, y, z, 0);
+      }
     }
+  }
+
+  /**
+   * Applies a remote edit from another player WITHOUT re-broadcasting it.
+   */
+  applyRemoteEdit(x, y, z, blockId) {
+    this._applyingRemote = true;
+    if (blockId === 0) {
+      this.removeBlock(x, y, z);
+    } else {
+      this.addBlock(x, y, z, blockId);
+    }
+    this._applyingRemote = false;
   }
 
   /**

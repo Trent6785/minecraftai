@@ -1,6 +1,6 @@
 // Multiplayer: sync player positions and render other players as avatars.
 import { db } from './firebase';
-import { ref, set, get, update, remove, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect } from 'firebase/database';
+import { ref, set, get, update, remove, push, onValue, onChildAdded, onChildChanged, onChildRemoved, onDisconnect } from 'firebase/database';
 import { Avatar } from './avatar';
 
 function getRoomCode() {
@@ -35,6 +35,7 @@ let playersRef = null;
 let seedRef = null;
 let hostRef = null;
 let roomRef = null;
+let editsRef = null;
 
 function buildRefs() {
   playerRef = ref(db, `rooms/${roomCode}/players/${playerId}`);
@@ -42,6 +43,7 @@ function buildRefs() {
   seedRef = ref(db, `rooms/${roomCode}/seed`);
   hostRef = ref(db, `rooms/${roomCode}/host`);
   roomRef = ref(db, `rooms/${roomCode}`);
+  editsRef = ref(db, `rooms/${roomCode}/edits`);
 }
 
 export let isHost = false;
@@ -199,6 +201,20 @@ export function initMultiplayer(scene, world, localPlayer) {
       remotePlayers.delete(data.id);
       console.log(`[mp] player left: ${data.id}`);
     }
+  });
+
+  // --- Block edit sync ---
+  // Send our local edits (manual place/break AND AI builds) to Firebase.
+  _world.onLocalEdit = (x, y, z, blockId) => {
+    push(editsRef, { x, y, z, b: blockId });
+  };
+
+  // Receive edits. onChildAdded fires for ALL existing edits first (so a new
+  // joiner replays everything already built), then for each new edit live.
+  onChildAdded(editsRef, (snap) => {
+    const e = snap.val();
+    if (!e) return;
+    _world.applyRemoteEdit(e.x, e.y, e.z, e.b);
   });
 
   // --- Detect the room being closed (host force-close, or it vanishing) ---
