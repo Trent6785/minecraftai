@@ -167,9 +167,35 @@ function animate() {
 
     // Sync our position and interpolate other players' avatars.
     updateMultiplayer(dt);
+
+    // Update the third-person selfie avatar + corner camera.
+    updateCornerView(dt);
   }
 
+  // Main view.
   renderer.render(scene, (player.controls.isLocked || builderViewActive) ? player.camera : orbitCamera);
+
+  // Third-person corner inset (top-right), only while actually playing.
+  if (selfAvatar && selfAvatar.ready && player.controls.isLocked) {
+    const w = window.innerWidth, h = window.innerHeight;
+    const insetW = Math.min(260, Math.floor(w * 0.22));
+    const insetH = Math.floor(insetW * 0.85);
+    const margin = 12;
+    const x = w - insetW - margin;
+    const y = h - insetH - margin; // WebGL origin is bottom-left
+
+    renderer.setScissorTest(true);
+    renderer.setViewport(x, y, insetW, insetH);
+    renderer.setScissor(x, y, insetW, insetH);
+    cornerCamera.aspect = insetW / insetH;
+    cornerCamera.updateProjectionMatrix();
+    renderer.render(scene, cornerCamera);
+
+    // Reset back to full-screen for next frame.
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, w, h);
+  }
+
   stats.update();
 
   previousTime = currentTime;
@@ -187,6 +213,72 @@ window.addEventListener('resize', () => {
 
 setupUI(world, player, physics, scene);
 setupLights();
+
+// ============================================================
+// ---- Third-person corner view (selfie cam) ----
+// ============================================================
+// Renders a small inset in the top-right showing the player's own avatar from
+// behind and above. The self-avatar lives on layer 2 so the main first-person
+// camera doesn't draw it (which would block the view), but the corner camera
+// (layers 0 + 2) does.
+const SELF_LAYER = 2;
+let selfAvatar = null;
+const cornerCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
+cornerCamera.layers.enable(0);
+cornerCamera.layers.enable(SELF_LAYER);
+
+import('./avatar').then(({ Avatar }) => {
+  // Use whatever avatar the player picked (default steve).
+  selfAvatar = new Avatar(scene, getSelfAvatarType(), player.height);
+  // Put the avatar's meshes on the self layer once it loads.
+  const setLayer = () => {
+    if (selfAvatar && selfAvatar.root) {
+      selfAvatar.root.traverse((o) => o.layers.set(SELF_LAYER));
+    }
+  };
+  // Retry briefly until the model has loaded.
+  const iv = setInterval(() => { if (selfAvatar && selfAvatar.ready) { setLayer(); clearInterval(iv); } }, 100);
+});
+
+function getSelfAvatarType() {
+  // Mirror the avatar chosen in the picker (falls back to steve).
+  const selected = document.querySelector('.avatar-card.selected');
+  return (selected && selected.dataset.avatar) || 'steve';
+}
+
+// Update the self-avatar to follow the player, and position the corner camera.
+let _lastSelfPos = new THREE.Vector3();
+function updateCornerView(dt) {
+  if (!selfAvatar || !selfAvatar.ready) return;
+
+  // Player yaw from the camera.
+  const yaw = player.camera.rotation.y;
+  const feetY = player.position.y - player.height;
+
+  // Detect real movement (horizontal distance moved this frame).
+  const dx = player.position.x - _lastSelfPos.x;
+  const dz = player.position.z - _lastSelfPos.z;
+  const movedSq = dx * dx + dz * dz;
+  _lastSelfPos.set(player.position.x, player.position.y, player.position.z);
+
+  // Snap avatar directly to the player (no interpolation needed for self).
+  selfAvatar.root.position.set(player.position.x, feetY, player.position.z);
+  selfAvatar.root.rotation.y = yaw;
+  selfAvatar.targetPosition.set(player.position.x, feetY, player.position.z);
+  selfAvatar.targetYaw = yaw;
+  if (selfAvatar.mixer) selfAvatar.mixer.update(dt);
+  selfAvatar.setMoving(movedSq > 0.0001);
+
+  // Corner camera sits behind and above the player, looking at them.
+  const back = 4, up = 2.5;
+  cornerCamera.position.set(
+    player.position.x + Math.sin(yaw) * back,
+    player.position.y + up,
+    player.position.z + Math.cos(yaw) * back
+  );
+  cornerCamera.lookAt(player.position.x, player.position.y - 0.3, player.position.z);
+}
+
 
 // ============================================================
 // ---- Mode menu flow: Singleplayer / Multiplayer + avatar ----
