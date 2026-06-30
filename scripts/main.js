@@ -238,6 +238,28 @@ setTimeout(() => {
   console.log(`[door] test door placed at ${dx},${groundY},${dz}`);
 }, 1200);
 
+// Right-click toggles a door you're looking at (within reach).
+const _doorRaycaster = new THREE.Raycaster();
+const _screenCenter = new THREE.Vector2(0, 0); // pointer-locked = screen center
+window.addEventListener('contextmenu', (e) => e.preventDefault()); // no browser menu
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 2) return;             // right-click only
+  if (!player.controls.isLocked) return; // only while playing
+  if (player.readOnly) return;           // spectators can't toggle
+
+  _doorRaycaster.setFromCamera(_screenCenter, player.camera);
+  const meshes = doorManager.getMeshes();
+  if (meshes.length === 0) return;
+  const hits = _doorRaycaster.intersectObjects(meshes, false);
+  if (hits.length > 0 && hits[0].distance < 6) {
+    const door = doorManager.doorForMesh(hits[0].object);
+    if (door) {
+      doorManager.toggle(door);
+      sounds.play(door.open ? 'place' : 'break', 0.4); // reuse a sound for now
+    }
+  }
+});
+
 // ---- Sound effects ----
 // Place/break sounds fire on every local edit (manual or AI), in all modes.
 let _aiBuildSoundThrottle = 0;

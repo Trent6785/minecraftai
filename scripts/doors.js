@@ -99,4 +99,30 @@ export class DoorManager {
     if (this.doors.has(this.key(x, y - 1, z))) return this.doors.get(this.key(x, y - 1, z));
     return null;
   }
+
+  /** Toggle a door open/closed (snaps instantly). Rotates the hinge pivot 90°. */
+  toggle(door) {
+    if (!door) return;
+    door.open = !door.open;
+    // Open swings 90° around the hinge. Direction depends on hinge side so the
+    // door opens "inward/away" consistently.
+    const swing = (door.hinge === 'left') ? -Math.PI / 2 : Math.PI / 2;
+    const base = FACING_YAW[door.facing] ?? 0;
+    door.pivot.rotation.y = door.open ? base + swing : base;
+  }
+
+  /** All door meshes, for raycasting. */
+  getMeshes() {
+    const meshes = [];
+    for (const d of this.doors.values()) meshes.push(d.mesh);
+    return meshes;
+  }
+
+  /** Find the door record owning a given mesh. */
+  doorForMesh(mesh) {
+    for (const d of this.doors.values()) {
+      if (d.mesh === mesh) return d;
+    }
+    return null;
+  }
 }
