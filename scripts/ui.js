@@ -76,4 +76,7 @@ export function setupUI(world, player, physics, scene) {
       }
     }
   })
+
+  // Hide the dev panel by default; players can press U to reveal it.
+  gui.hide();
 }

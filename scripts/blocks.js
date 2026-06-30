@@ -10,6 +10,18 @@ function loadTexture(path) {
   return texture;
 }
 
+// Loads one tile from a horizontal atlas of `tiles` equal-width tiles.
+// tileIndex is 0-based from the left. Used for the melon's 32x16 (2-tile) PNG.
+function loadAtlasTile(path, tileIndex, tiles) {
+  const texture = textureLoader.load(path);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.magFilter = THREE.NearestFilter;
+  texture.minFilter = THREE.NearestFilter;
+  texture.repeat.set(1 / tiles, 1);
+  texture.offset.set(tileIndex / tiles, 0);
+  return texture;
+}
+
 const textures = {
   cactusSide: loadTexture('textures/cactus_side.png'),
   cactusTop: loadTexture('textures/cactus_top.png'),
@@ -28,6 +40,18 @@ const textures = {
   snow: loadTexture('textures/snow.png'),
   snowSide: loadTexture('textures/snow_side.png'),
   stone: loadTexture('textures/stone.png'),
+  // --- New textures ---
+  glass: loadTexture('textures/glass.png'),
+  oakPlank: loadTexture('textures/oakplank.png'),
+  glowstone: loadTexture('textures/glowstone.png'),
+  pumpkin: loadTexture('textures/pumpkin.png'),
+  redFlower: loadTexture('textures/redflower.png'),
+  yellowFlower: loadTexture('textures/yellowflower.png'),
+  redMushroom: loadTexture('textures/mushroom.png'),
+  brownMushroom: loadTexture('textures/brownmushroom.png'),
+  melonSide: loadAtlasTile('textures/melon.png', 0, 2), // left tile
+  melonTop: loadAtlasTile('textures/melon.png', 1, 2),  // right tile
+  cobblestone: loadTexture('textures/cobblestone.png'),
 };
 
 export const blocks = {
@@ -157,6 +181,99 @@ export const blocks = {
       new THREE.MeshLambertMaterial({ color: 0x80c080, map: textures.grassSide }), // front
       new THREE.MeshLambertMaterial({ color: 0x80c080, map: textures.grassSide })  // back
     ]
+  },
+  // ============================================================
+  // ---- New blocks ----
+  // ============================================================
+  glass: {
+    id: 15,
+    name: 'glass',
+    visible: true,
+    // Transparent so you can see through it (real windows).
+    material: new THREE.MeshLambertMaterial({
+      map: textures.glass,
+      transparent: true,
+      opacity: 0.85
+    })
+  },
+  oakPlank: {
+    id: 16,
+    name: 'oakPlank',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.oakPlank })
+  },
+  glowstone: {
+    id: 17,
+    name: 'glowstone',
+    visible: true,
+    // Emissive so it visually glows (doesn't cast light, but looks lit).
+    material: new THREE.MeshLambertMaterial({
+      map: textures.glowstone,
+      emissive: 0xffdd88,
+      emissiveIntensity: 0.6
+    })
+  },
+  pumpkin: {
+    id: 18,
+    name: 'pumpkin',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.pumpkin })
+  },
+  // ---- Cross-shaped plants (rendered as X, non-solid, walk-through) ----
+  redFlower: {
+    id: 19,
+    name: 'redFlower',
+    visible: true,
+    isPlant: true,
+    material: new THREE.MeshLambertMaterial({
+      map: textures.redFlower, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
+    })
+  },
+  yellowFlower: {
+    id: 20,
+    name: 'yellowFlower',
+    visible: true,
+    isPlant: true,
+    material: new THREE.MeshLambertMaterial({
+      map: textures.yellowFlower, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
+    })
+  },
+  redMushroom: {
+    id: 21,
+    name: 'redMushroom',
+    visible: true,
+    isPlant: true,
+    material: new THREE.MeshLambertMaterial({
+      map: textures.redMushroom, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
+    })
+  },
+  brownMushroom: {
+    id: 22,
+    name: 'brownMushroom',
+    visible: true,
+    isPlant: true,
+    material: new THREE.MeshLambertMaterial({
+      map: textures.brownMushroom, transparent: true, alphaTest: 0.5, side: THREE.DoubleSide
+    })
+  },
+  melon: {
+    id: 23,
+    name: 'melon',
+    visible: true,
+    material: [
+      new THREE.MeshLambertMaterial({ map: textures.melonSide }), // right
+      new THREE.MeshLambertMaterial({ map: textures.melonSide }), // left
+      new THREE.MeshLambertMaterial({ map: textures.melonTop }),  // top
+      new THREE.MeshLambertMaterial({ map: textures.melonTop }),  // bottom
+      new THREE.MeshLambertMaterial({ map: textures.melonSide }), // front
+      new THREE.MeshLambertMaterial({ map: textures.melonSide })  // back
+    ]
+  },
+  cobblestone: {
+    id: 24,
+    name: 'cobblestone',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.cobblestone })
   },
 };
 

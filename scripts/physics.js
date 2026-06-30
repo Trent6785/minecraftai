@@ -38,9 +38,15 @@ export class Physics {
   update(dt, player, world) {
     this.accumulator += dt;
     while (this.accumulator >= this.stepSize) {
-      player.velocity.y -= this.gravity * this.stepSize;
+      // No gravity while flying.
+      if (!player.flying) {
+        player.velocity.y -= this.gravity * this.stepSize;
+      }
       player.applyInputs(this.stepSize);
-      this.detectCollisions(player, world);
+      // Skip collision while flying so you can pass freely (and not get stuck).
+      if (!player.flying) {
+        this.detectCollisions(player, world);
+      }
       this.accumulator -= this.stepSize;
     }
   }
@@ -83,6 +89,9 @@ export class Physics {
         for (let z = minZ; z <= maxZ; z++) {
           const blockId = world.getBlock(x, y, z)?.id;
           if (blockId && blockId !== blocks.empty.id) {
+            // Plants (flowers, mushrooms) are non-solid — walk through them.
+            const blockDef = Object.values(blocks).find(b => b.id === blockId);
+            if (blockDef?.isPlant) continue;
             const block = { x, y, z };
             candidates.push(block);
             this.addCollisionHelper(block);

@@ -12,7 +12,15 @@ body {
 }
 
 h1 {
-  font-size: 3em;
+  font-size: 3.4em;
+  margin: 0 0 0.1em 0;
+  letter-spacing: 2px;
+  text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* The "AI" part of the title in terracotta to match the favicon */
+h1 .ai {
+  color: #e2552f;
 }
 
 #info {
@@ -59,7 +67,9 @@ h1 {
   left: 0;
   bottom: 0;
   right: 0;
-  background-color: #00000080;
+  /* Subtle gradient over the dark wash for a bit more depth */
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.7) 100%);
 
   display: flex;
   justify-content: center;
@@ -68,6 +78,119 @@ h1 {
   font-size: 2em;
   color: white;
   text-align: center;
+}
+
+#instructions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+}
+
+.tagline {
+  font-size: 0.5em;
+  margin: 0 0 1em 0;
+  color: #d8d8d8;
+  letter-spacing: 1px;
+}
+
+/* Highlighted AI builder callout */
+.ai-callout {
+  font-size: 0.5em;
+  background: rgba(226, 85, 47, 0.18);
+  border: 2px solid #e2552f;
+  padding: 12px 20px;
+  margin-bottom: 1.2em;
+  max-width: 460px;
+  line-height: 1.4;
+}
+
+/* Two-column control list */
+.controls {
+  display: flex;
+  gap: 48px;
+  font-size: 0.42em;
+  margin-bottom: 1.4em;
+}
+
+.controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.ctrl {
+  white-space: nowrap;
+}
+
+/* Key "cap" styling */
+.key {
+  display: inline-block;
+  min-width: 1.2em;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-bottom-width: 3px;
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-right: 8px;
+  color: #fff;
+}
+
+.ai-callout .key {
+  background: rgba(226, 85, 47, 0.35);
+  border-color: #e2552f;
+  margin-left: 4px;
+}
+
+/* Avatar picker on the start screen */
+.avatar-picker {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 1.4em;
+}
+
+.avatar-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  font-size: 0.45em;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.avatar-card img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.avatar-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.avatar-card.selected {
+  border-color: #e2552f;
+  background: rgba(226, 85, 47, 0.15);
+}
+
+/* Pulsing "press any key" prompt */
+.start {
+  font-size: 1.1em;
+  margin: 0.2em 0 0 0;
+  text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }
 
 #status {

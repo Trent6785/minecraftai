@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Minecraft.js</title>
+  <title>Minecraft AI</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 
@@ -29,18 +29,44 @@
   </div>
   <div id="overlay">
     <div id="instructions">
-      <h1>MINECRAFTjs</h1>
-      WASD - Move<br>
-      SHIFT - Sprint<br>
-      SPACE - Jump<br>
-      R - Reset Camera<br>
-      U - Toggle UI
-      0 - Pickaxe<br>
-      1-8 - Select Block<br>
-      F1 - Save Game<br>
-      F2 - Load Game<br>
-      F10 - Debug Camera<br><br>
-      <h2>PRESS ANY KEY TO START</h2>
+      <h1>MINECRAFT<span class="ai">AI</span></h1>
+      <p class="tagline">Explore a world you can build with AI</p>
+
+      <div class="ai-callout">
+        Press <span class="key">B</span> and describe anything &mdash; the AI builds it
+      </div>
+
+      <div class="avatar-picker">
+        <div class="avatar-card selected" data-avatar="steve">
+          <img src="textures/steve_preview.png" alt="Steve" />
+          <span>Steve</span>
+        </div>
+        <div class="avatar-card" data-avatar="alex">
+          <img src="textures/alex_preview.png" alt="Alex" />
+          <span>Alex</span>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="controls-col">
+          <div class="ctrl"><span class="key">WASD</span> Move</div>
+          <div class="ctrl"><span class="key">Shift</span> Sprint</div>
+          <div class="ctrl"><span class="key">Space</span> Jump</div>
+          <div class="ctrl"><span class="key">Space&times;2</span> Fly toggle</div>
+          <div class="ctrl"><span class="key">R</span> Reset Camera</div>
+          <div class="ctrl"><span class="key">U</span> Toggle UI</div>
+        </div>
+        <div class="controls-col">
+          <div class="ctrl"><span class="key">B</span> AI Build</div>
+          <div class="ctrl"><span class="key">N</span> Undo Build</div>
+          <div class="ctrl"><span class="key">0</span> Pickaxe</div>
+          <div class="ctrl"><span class="key">1-8</span> Select Block</div>
+          <div class="ctrl"><span class="key">K</span> Save Game</div>
+          <div class="ctrl"><span class="key">L</span> Load Game</div>
+        </div>
+      </div>
+
+      <h2 class="start">PRESS ANY KEY TO START</h2>
     </div>
   </div>
   <div id="status"></div>

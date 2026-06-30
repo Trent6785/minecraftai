@@ -6,6 +6,8 @@ import { Player } from './player';
 import { Physics } from './physics';
 import { setupUI } from './ui';
 import { ModelLoader } from './modelLoader';
+import { Avatar } from './avatar';
+import { initMultiplayer, updateMultiplayer, chooseAvatar } from './multiplayer';
 
 // UI Setup
 const stats = new Stats();
@@ -44,6 +46,7 @@ const modelLoader = new ModelLoader((models) => {
 })
 
 let sun;
+let ambientLight;
 function setupLights() {
   sun = new THREE.DirectionalLight();
   sun.intensity = 1.5;
@@ -62,10 +65,78 @@ function setupLights() {
   scene.add(sun);
   scene.add(sun.target);
 
-  const ambient = new THREE.AmbientLight();
-  ambient.intensity = 0.2;
-  scene.add(ambient);
+  ambientLight = new THREE.AmbientLight();
+  ambientLight.intensity = 0.2;
+  scene.add(ambientLight);
 }
+
+// ---- Day/night cycle + depth darkening ----
+// A full day loops every DAY_LENGTH seconds. The sun arcs across the sky,
+// changes color (warm at dawn/dusk, white midday), and brightness rises and
+// falls. Depth darkening then dims everything further the deeper you go, so
+// caves are dark by day and the surface is dark by night.
+const DAY_LENGTH = 240;      // seconds for a full day-night loop (4 minutes)
+const SURFACE_Y = 10;        // approx ground level; below this depth dimming starts
+const DARK_DEPTH = 14;       // blocks down until fully dark underground
+
+let dayTime = DAY_LENGTH * 0.30; // start mid-morning
+
+// Reusable colors to avoid per-frame allocation.
+const _skyDay = new THREE.Color(0x80a0e0);
+const _skyNight = new THREE.Color(0x05060f);
+const _skyDusk = new THREE.Color(0xe88a4a);
+const _sunDay = new THREE.Color(0xffffff);
+const _sunDusk = new THREE.Color(0xffb066);
+const _caveDark = new THREE.Color(0x0a0a12);
+const _tmpSky = new THREE.Color();
+const _tmpSun = new THREE.Color();
+
+function updateDayNight(dt) {
+  dayTime = (dayTime + dt) % DAY_LENGTH;
+  // phase: 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset.
+  const phase = dayTime / DAY_LENGTH;
+  const angle = phase * Math.PI * 2;
+
+  // Sun height: sin gives -1 (midnight) .. +1 (noon). daylight in [0,1].
+  const sunHeight = Math.sin(angle - Math.PI / 2);
+  const daylight = Math.max(0, sunHeight);          // 0 at/under horizon, 1 at noon
+  const duskFactor = Math.max(0, 1 - Math.abs(sunHeight) * 3); // peaks near horizon
+
+  // Move the sun around the player (direction matters for shadows/shading).
+  sun.position.set(
+    Math.cos(angle) * 80,
+    sunHeight * 80,
+    Math.sin(angle) * 40
+  );
+
+  // --- Depth factor: how far underground (0 surface .. 1 deep) ---
+  let depth = (SURFACE_Y - player.position.y) / DARK_DEPTH;
+  depth = Math.max(0, Math.min(1, depth));
+  const depthLight = 1 - depth; // 1 at surface, 0 deep underground
+
+  // --- Sun intensity: bright by day, near zero at night, dimmed by depth ---
+  const dayBright = 0.15 + 1.35 * daylight;  // 0.15 night .. 1.5 noon
+  sun.intensity = dayBright * (1 - 0.9 * depth);
+
+  // --- Ambient: a little light at night, more by day, dimmed by depth ---
+  ambientLight.intensity = (0.06 + 0.18 * daylight) * (1 - 0.75 * depth);
+
+  // --- Sun color: warm near horizon, white high up ---
+  _tmpSun.copy(_sunDay).lerp(_sunDusk, duskFactor);
+  sun.color.copy(_tmpSun);
+
+  // --- Sky color: day blue -> dusk orange -> night ---
+  _tmpSky.copy(_skyNight).lerp(_skyDay, daylight);      // night..day blend
+  _tmpSky.lerp(_skyDusk, duskFactor * 0.6);             // add dusk warmth near horizon
+  _tmpSky.lerp(_caveDark, depth);                       // darken underground
+
+  scene.background = _tmpSky.clone();
+  if (scene.fog) scene.fog.color.copy(_tmpSky);
+}
+
+// True while the build box is open, so the render loop keeps using the
+// first-person camera instead of falling back to the orbit (3rd person) camera.
+let builderViewActive = false;
 
 // Render loop
 let previousTime = performance.now();
@@ -90,9 +161,15 @@ function animate() {
     // Update positon of the orbit camera to track player 
     orbitCamera.position.copy(player.position).add(new THREE.Vector3(16, 16, 16));
     controls.target.copy(player.position);
+
+    // Dim the world as the player descends underground.
+    updateDayNight(dt);
+
+    // Sync our position and interpolate other players' avatars.
+    updateMultiplayer(dt);
   }
 
-  renderer.render(scene, player.controls.isLocked ? player.camera : orbitCamera);
+  renderer.render(scene, (player.controls.isLocked || builderViewActive) ? player.camera : orbitCamera);
   stats.update();
 
   previousTime = currentTime;
@@ -110,4 +187,334 @@ window.addEventListener('resize', () => {
 
 setupUI(world, player, physics, scene);
 setupLights();
+
+// ---- Avatar picker + deferred multiplayer join ----
+// The player picks Steve or Alex on the start screen, then joins the room when
+// they start playing (first time controls lock).
+const avatarCards = document.querySelectorAll('.avatar-card');
+avatarCards.forEach((card) => {
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    avatarCards.forEach((c) => c.classList.remove('selected'));
+    card.classList.add('selected');
+    chooseAvatar(card.dataset.avatar);
+  });
+});
+
+// Join the room the first time the player enters the world.
+let mpJoined = false;
+player.controls.addEventListener('lock', () => {
+  if (!mpJoined) {
+    mpJoined = true;
+    initMultiplayer(scene, world, player);
+  }
+});
+
 animate();
+
+// ============================================================
+// ---- AI Builder ----
+// ============================================================
+const BUILDER_API_URL = 'https://minecraft-ai-builder.trentnoland5678.workers.dev';
+
+// Tracks the most recent build so it can be undone.
+// Each entry: { x, y, z, prevId } — prevId is what was there before (0 = empty).
+let lastBuild = null;
+
+// Finds the Y of the topmost solid block in column (x, z), scanning down from startY.
+function findGroundY(x, z, startY) {
+  for (let y = startY; y >= 0; y--) {
+    const block = world.getBlock(x, y, z);
+    if (block && block.id !== 0) return y;
+  }
+  return 0;
+}
+
+// Computes the world-space anchor (x, z) for a build:
+// where the player is looking if they're targeting a block, otherwise
+// a few blocks ahead of the player along their view direction.
+function getBuildAnchor() {
+  if (player.selectedCoords) {
+    return {
+      x: Math.round(player.selectedCoords.x),
+      z: Math.round(player.selectedCoords.z)
+    };
+  }
+  // Fall back to ~6 blocks in front of the player along view direction.
+  const dir = new THREE.Vector3();
+  player.camera.getWorldDirection(dir);
+  dir.y = 0;
+  dir.normalize();
+  return {
+    x: Math.round(player.position.x + dir.x * 6),
+    z: Math.round(player.position.z + dir.z * 6)
+  };
+}
+
+// The anchor and ground level used for the LAST build, so that a follow-up
+// edit maps the AI's coordinates back onto the same world positions.
+let lastAnchor = null;     // { x, z }
+let lastGroundLevel = null; // number
+
+// Persistent set of world positions that the AI has placed blocks at.
+// This is how we tell a built STRUCTURE apart from natural terrain: only
+// these count as editable. Key format: "x,y,z".
+const aiPlaced = new Set();
+const posKey = (x, y, z) => x + ',' + y + ',' + z;
+
+// Scans for an AI-built structure near the build anchor. Only blocks the AI
+// itself placed count — natural terrain (grass, trees, hills) is ignored, so
+// standing in a field is correctly treated as a fresh BUILD, not an edit.
+// Returns { existing: [{x,y,z,id}], anchor, groundLevel }.
+function scanExisting() {
+  const anchor = getBuildAnchor();
+  const ax = anchor.x;
+  const az = anchor.z;
+
+  const scanTop = Math.round(player.position.y) + 8;
+  const groundLevel = findGroundY(ax, az, scanTop);
+
+  // Look for AI-placed blocks within range of the anchor.
+  const R = 12;  // horizontal half-size
+  const H = 24;  // vertical range above ground
+  const existing = [];
+  for (let dx = -R; dx <= R; dx++) {
+    for (let dz = -R; dz <= R; dz++) {
+      for (let h = 1; h <= H; h++) {
+        const wx = ax + dx;
+        const wy = groundLevel + h;
+        const wz = az + dz;
+        if (!aiPlaced.has(posKey(wx, wy, wz))) continue; // skip terrain
+        const block = world.getBlock(wx, wy, wz);
+        if (block && block.id !== 0) {
+          // AI frame: x/z offsets from anchor, z centered around 7, y = height.
+          existing.push({ x: dx, y: h, z: dz + 7, id: block.id });
+        }
+      }
+    }
+  }
+  return { existing, anchor, groundLevel };
+}
+
+// Places a blueprint. `mode` is 'build' (fresh, recenter + ground-snap) or
+// 'edit' (use the same anchor/ground as the scan so coords line up).
+// blockId === 0 means DELETE the block at that position.
+function buildBlueprint(blueprint, mode, scan) {
+  let ax, az, groundLevel;
+
+  if (mode === 'edit' && scan) {
+    // Reuse the scan's frame exactly so edits align with existing blocks.
+    ax = scan.anchor.x;
+    az = scan.anchor.z;
+    groundLevel = scan.groundLevel;
+  } else {
+    // Fresh build: recenter the blueprint on the anchor and snap to ground.
+    const anchor = getBuildAnchor();
+    ax = anchor.x;
+    az = anchor.z;
+
+    let minBX = Infinity, maxBX = -Infinity, minBZ = Infinity, maxBZ = -Infinity;
+    for (const b of blueprint) {
+      if (b.blockId === 0) continue; // ignore deletes when centering
+      if (b.x < minBX) minBX = b.x;
+      if (b.x > maxBX) maxBX = b.x;
+      if (b.z < minBZ) minBZ = b.z;
+      if (b.z > maxBZ) maxBZ = b.z;
+    }
+    const cX = isFinite(minBX) ? Math.round((minBX + maxBX) / 2) : 0;
+    const cZ = isFinite(minBZ) ? Math.round((minBZ + maxBZ) / 2) : 7;
+
+    const scanTop = Math.round(player.position.y) + 8;
+    let g = Infinity;
+    const footprint = new Set();
+    for (const b of blueprint) {
+      const wx = ax + (b.x - cX);
+      const wz = az + (b.z - cZ);
+      const key = wx + ',' + wz;
+      if (!footprint.has(key)) {
+        footprint.add(key);
+        const gg = findGroundY(wx, wz, scanTop);
+        if (gg < g) g = gg;
+      }
+    }
+    groundLevel = isFinite(g) ? g : Math.round(player.position.y) - 1;
+
+    // Store the recentre offsets on the blueprint for placement below.
+    blueprint = blueprint.map(b => ({ ...b, x: b.x - cX, z: b.z - cZ }));
+  }
+
+  // For edits, the AI frame centers z around 7; undo that here.
+  const zOffset = (mode === 'edit') ? 7 : 0;
+
+  const record = [];
+  for (const b of blueprint) {
+    const wx = ax + b.x;
+    const wy = groundLevel + b.y;
+    const wz = az + (b.z - zOffset);
+    if (wy < 1) continue;
+    const existing = world.getBlock(wx, wy, wz);
+    const prevId = existing ? existing.id : 0;
+
+    if (b.blockId === 0) {
+      // delete — only if something is actually there
+      if (prevId !== 0) {
+        record.push({ x: wx, y: wy, z: wz, prevId });
+        world.removeBlock(wx, wy, wz);
+        aiPlaced.delete(posKey(wx, wy, wz));
+      }
+    } else {
+      record.push({ x: wx, y: wy, z: wz, prevId });
+      world.addBlock(wx, wy, wz, b.blockId);
+      aiPlaced.add(posKey(wx, wy, wz));
+    }
+  }
+  lastBuild = record;
+  lastAnchor = { x: ax, z: az };
+  lastGroundLevel = groundLevel;
+  console.log(`${mode === 'edit' ? 'Edited' : 'Built'} ${record.length} blocks at (${ax}, ${az}), ground ${groundLevel}`);
+}
+
+// Undo the most recent build: remove placed blocks, restore overwritten ones.
+function undoLastBuild() {
+  if (!lastBuild || lastBuild.length === 0) {
+    showToast('Nothing to undo');
+    return;
+  }
+  for (const r of lastBuild) {
+    world.removeBlock(r.x, r.y, r.z);
+    aiPlaced.delete(posKey(r.x, r.y, r.z));
+    if (r.prevId && r.prevId !== 0) {
+      world.addBlock(r.x, r.y, r.z, r.prevId);
+      // If we restored a block that the AI had placed earlier, keep tracking it.
+      // (prevId came from the world; only re-track if it was AI-owned before —
+      // we can't know for sure, so we leave it untracked, which is safe:
+      // worst case that block just won't count as part of the structure.)
+    }
+  }
+  showToast(`Undid ${lastBuild.length} blocks`);
+  lastBuild = null;
+}
+
+// --- Small toast for feedback ---
+function showToast(msg) {
+  const t = document.getElementById('status');
+  if (t) {
+    t.innerHTML = msg;
+    setTimeout(() => { if (t.innerHTML === msg) t.innerHTML = ''; }, 2500);
+  }
+}
+
+// --- Build prompt UI (styled like Minecraft's chat box) ---
+const builderUI = document.createElement('div');
+builderUI.style.cssText = `
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  z-index: 1000; display: none; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.55); padding: 6px 8px;
+  font-family: 'Minecraft', monospace;
+`;
+builderUI.innerHTML = `
+  <input id="ai-build-input" type="text" placeholder="Describe what to build..."
+    style="width:320px; padding:6px 8px; border:none; background:rgba(0,0,0,0.5);
+           color:#ffffff; font-family:'Minecraft',monospace; font-size:15px; outline:none;" />
+  <button id="ai-build-go"
+    style="padding:6px 12px; border:2px solid #6e6e6e; background:#7a7a7a; color:#fff;
+           font-family:'Minecraft',monospace; font-size:14px; cursor:pointer;">Build</button>
+  <span id="ai-build-status" style="color:#e0e0e0; font-size:13px; min-width:60px;"></span>
+`;
+document.body.appendChild(builderUI);
+
+const buildInput = builderUI.querySelector('#ai-build-input');
+const buildGo = builderUI.querySelector('#ai-build-go');
+const buildStatus = builderUI.querySelector('#ai-build-status');
+
+let builderOpen = false;
+function openBuilder() {
+  builderOpen = true;
+  builderViewActive = true;
+  builderUI.style.display = 'flex';
+  // Suppress the start menu while typing: flag debugCamera so the unlock
+  // handler doesn't show the overlay, then unlock for typing.
+  player.debugCamera = true;
+  if (player.controls.isLocked) player.controls.unlock();
+  buildInput.focus();
+}
+function closeBuilder() {
+  builderOpen = false;
+  builderViewActive = false;
+  builderUI.style.display = 'none';
+  buildInput.value = '';
+  buildStatus.textContent = '';
+  player.debugCamera = false;
+  // Re-lock straight back into the world.
+  if (!player.controls.isLocked) {
+    try { player.controls.lock(); } catch (e) {}
+  }
+}
+
+async function runBuild() {
+  const prompt = buildInput.value.trim();
+  if (!prompt) return;
+  buildGo.disabled = true;
+
+  // Animate "Working", "Working.", "Working..", "Working..." in a loop.
+  let dots = 0;
+  buildStatus.textContent = 'Working';
+  const workingAnim = setInterval(() => {
+    dots = (dots + 1) % 4;
+    buildStatus.textContent = 'Working' + '.'.repeat(dots);
+  }, 400);
+
+  try {
+    // Scan for an existing structure near the build anchor. If blocks are
+    // found, we're editing; otherwise it's a fresh build.
+    const scan = scanExisting();
+    const isEdit = scan.existing.length > 0;
+
+    const res = await fetch(BUILDER_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt,
+        existing: isEdit ? scan.existing : []
+      })
+    });
+    const data = await res.json();
+    if (data.error) {
+      buildStatus.textContent = 'Error';
+      console.error('Builder error:', data);
+    } else if (data.blocks && data.blocks.length) {
+      buildBlueprint(data.blocks, isEdit ? 'edit' : 'build', scan);
+      const verb = isEdit ? 'Edited' : 'Built';
+      buildStatus.textContent = `${verb} ${data.blocks.length}!`;
+      setTimeout(closeBuilder, 1000);
+    } else {
+      buildStatus.textContent = 'Nothing built';
+    }
+  } catch (err) {
+    buildStatus.textContent = 'Network error';
+    console.error(err);
+  } finally {
+    // Always stop the dot animation once the build finishes or errors.
+    clearInterval(workingAnim);
+  }
+  buildGo.disabled = false;
+}
+
+buildGo.addEventListener('click', runBuild);
+buildInput.addEventListener('keydown', (ev) => {
+  ev.stopPropagation();
+  if (ev.key === 'Enter') runBuild();
+  if (ev.key === 'Escape') closeBuilder();
+});
+
+// Press B to open the builder; N to undo last build.
+document.addEventListener('keydown', (ev) => {
+  if (ev.code === 'KeyB' && !builderOpen && player.controls.isLocked) {
+    ev.preventDefault();
+    openBuilder();
+  }
+  if (ev.code === 'KeyN' && !builderOpen && player.controls.isLocked) {
+    ev.preventDefault();
+    undoLastBuild();
+  }
+});

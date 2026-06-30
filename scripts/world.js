@@ -27,8 +27,8 @@ export class World extends THREE.Group {
     seed: 0,
     terrain: {
       scale: 100,
-      magnitude: 8,
-      offset: 6,
+      magnitude: 14,
+      offset: 7,
       waterOffset: 4
     },
     biomes: {
@@ -51,7 +51,7 @@ export class World extends THREE.Group {
         maxRadius: 3,
         density: 0.7 // Vary between 0.0 and 1.0
       },
-      frequency: 0.005
+      frequency: 0.006
     },
     clouds: {
       scale: 30,
@@ -61,16 +61,20 @@ export class World extends THREE.Group {
 
   dataStore = new DataStore();
 
-  constructor(seed = 0) {
+  constructor(seed = null) {
     super();
-    this.seed = seed;
+    // Use a random seed each time the page loads, so every visit is a new world.
+    // (A specific seed can still be passed in; saves store the seed in params,
+    // so loading a saved game restores its exact world.)
+    this.params.seed = (seed !== null) ? seed : Math.floor(Math.random() * 100000);
+    this.seed = this.params.seed;
 
     document.addEventListener('keydown', (ev) => {
       switch (ev.code) {
-        case 'F1':
+        case 'KeyK':
           this.save();
           break;
-        case 'F2':
+        case 'KeyL':
           this.load();
           break;
       }
