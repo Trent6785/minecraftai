@@ -107,7 +107,7 @@ export class DoorManager {
     // SWING_DIRECTION controls which way the door opens. If it opens the wrong
     // way, flip this single value between +1 and -1.
     const SWING_DIRECTION = -1;
-    const swing = SWING_DIRECTION * (Math.PI / 2);
+    const swing = SWING_DIRECTION * (Math.PI);
     const base = FACING_YAW[door.facing] ?? 0;
     door.pivot.rotation.y = door.open ? base + swing : base;
   }
