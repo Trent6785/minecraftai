@@ -363,6 +363,10 @@ export class World extends THREE.Group {
       if (this.onLocalEdit && !this._applyingRemote) {
         this.onLocalEdit(x, y, z, blockId);
       }
+      // Always-firing hook (sound effects, etc.), for local edits only.
+      if (this.onAnyEdit && !this._applyingRemote) {
+        this.onAnyEdit('place', x, y, z, blockId);
+      }
     }
   }
 
@@ -397,6 +401,9 @@ export class World extends THREE.Group {
       // Broadcast deletion (blockId 0 = empty) unless applying a remote edit.
       if (this.onLocalEdit && !this._applyingRemote) {
         this.onLocalEdit(x, y, z, 0);
+      }
+      if (this.onAnyEdit && !this._applyingRemote) {
+        this.onAnyEdit('break', x, y, z, 0);
       }
     }
   }

@@ -8,6 +8,7 @@ import { setupUI } from './ui';
 import { ModelLoader } from './modelLoader';
 import { Avatar } from './avatar';
 import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed, hostWorld, loadHostedWorld, getViewCode, getMyHostCode } from './multiplayer';
+import { sounds } from './sounds';
 
 // UI Setup
 const stats = new Stats();
@@ -170,6 +171,9 @@ function animate() {
 
     // Update the third-person selfie avatar + corner camera.
     updateCornerView(dt);
+
+    // Footstep sounds while moving on the ground (not flying).
+    updateFootsteps(dt);
   }
 
   // Main view.
@@ -214,6 +218,17 @@ window.addEventListener('resize', () => {
 setupUI(world, player, physics, scene);
 setupLights();
 
+// ---- Sound effects ----
+// Place/break sounds fire on every local edit (manual or AI), in all modes.
+let _aiBuildSoundThrottle = 0;
+world.onAnyEdit = (kind) => {
+  // For AI builds (many edits at once), throttle so it's one sound, not 100.
+  const now = performance.now();
+  if (now - _aiBuildSoundThrottle < 60) return;
+  _aiBuildSoundThrottle = now;
+  sounds.play(kind === 'break' ? 'break' : 'place', 0.5);
+};
+
 // ============================================================
 // ---- Third-person corner view (selfie cam) ----
 // ============================================================
@@ -246,8 +261,31 @@ function getSelfAvatarType() {
   return (selected && selected.dataset.avatar) || 'steve';
 }
 
-// Update the self-avatar to follow the player, and position the corner camera.
-let _lastSelfPos = new THREE.Vector3();
+// Footstep sounds: play at intervals while moving on the ground.
+let _stepTimer = 0;
+const _stepPrev = new THREE.Vector3();
+let _stepInit = false;
+function updateFootsteps(dt) {
+  if (!_stepInit) { _stepPrev.copy(player.position); _stepInit = true; }
+  const dx = player.position.x - _stepPrev.x;
+  const dz = player.position.z - _stepPrev.z;
+  _stepPrev.copy(player.position);
+  const speed = Math.sqrt(dx * dx + dz * dz) / Math.max(dt, 0.0001);
+
+  const moving = speed > 1 && player.onGround && !player.flying;
+  if (moving) {
+    _stepTimer -= dt;
+    if (_stepTimer <= 0) {
+      sounds.play('step', 0.35);
+      // Faster steps when sprinting.
+      _stepTimer = player.sprinting ? 0.30 : 0.42;
+    }
+  } else {
+    _stepTimer = 0; // reset so first step plays immediately when moving resumes
+  }
+}
+
+
 const _lookDir = new THREE.Vector3();
 function updateCornerView(dt) {
   if (!selfAvatar || !selfAvatar.ready) return;
