@@ -9,6 +9,7 @@ import { ModelLoader } from './modelLoader';
 import { Avatar } from './avatar';
 import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed, hostWorld, loadHostedWorld, getViewCode, getMyHostCode } from './multiplayer';
 import { sounds } from './sounds';
+import { DoorManager } from './doors';
 
 // UI Setup
 const stats = new Stats();
@@ -220,6 +221,22 @@ window.addEventListener('resize', () => {
 
 setupUI(world, player, physics, scene);
 setupLights();
+
+// ---- Doors (Stage 1: render test) ----
+const doorManager = new DoorManager(scene);
+// Drop a test door near spawn once chunks exist, to confirm it renders.
+setTimeout(() => {
+  // Find ground near spawn and place a door standing on it.
+  const dx = Math.round(player.position.x);
+  const dz = Math.round(player.position.z) + 3;
+  let groundY = 12;
+  for (let y = 40; y >= 0; y--) {
+    const b = world.getBlock(dx, y, dz);
+    if (b && b.id !== 0) { groundY = y + 1; break; }
+  }
+  doorManager.addDoor(dx, groundY, dz, 'south', 'left');
+  console.log(`[door] test door placed at ${dx},${groundY},${dz}`);
+}, 1200);
 
 // ---- Sound effects ----
 // Place/break sounds fire on every local edit (manual or AI), in all modes.

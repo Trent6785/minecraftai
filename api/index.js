@@ -129,26 +129,39 @@ export default {
     }
 
     try {
-      const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${env.GEMINI_API_KEY}`,
-        {
+      const requestBody = JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+        generationConfig: {
+          temperature: 0.85,
+          responseMimeType: 'application/json',
+          thinkingConfig: { thinkingLevel: 'MEDIUM' }
+        }
+      });
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+      // Gemini occasionally returns transient errors (503 overloaded, 429 rate
+      // limit, 500). Retry a few times with a short backoff so these blips don't
+      // reach the player.
+      let geminiRes;
+      let lastErrText = '';
+      const RETRYABLE = [429, 500, 503];
+      for (let attempt = 0; attempt < 4; attempt++) {
+        geminiRes = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-            generationConfig: {
-              temperature: 0.85,
-              responseMimeType: 'application/json',
-              thinkingConfig: { thinkingLevel: 'medium' }
-            }
-          })
-        }
-      );
+          body: requestBody
+        });
+        if (geminiRes.ok) break;
+        lastErrText = await geminiRes.text();
+        if (!RETRYABLE.includes(geminiRes.status) || attempt === 3) break;
+        // Backoff: 0.6s, 1.2s, 2.4s.
+        await new Promise(r => setTimeout(r, 600 * Math.pow(2, attempt)));
+      }
 
       if (!geminiRes.ok) {
-        const errText = await geminiRes.text();
-        return json({ error: 'Gemini request failed', detail: errText }, 502);
+        return json({ error: 'Gemini request failed', detail: lastErrText }, 502);
       }
 
       const data = await geminiRes.json();
