@@ -9,13 +9,15 @@ const BLOCK_IDS = {
   jungle_leaves: 12, cactus: 13,
   glass: 15, planks: 16, glowstone: 17, pumpkin: 18,
   red_flower: 19, yellow_flower: 20, red_mushroom: 21, brown_mushroom: 22,
-  melon: 23, cobblestone: 24
+  melon: 23, cobblestone: 24,
+  red: 25, blue: 26, lightblue: 27, cyan: 28, yellow: 29,
+  lime: 30, pink: 31, magenta: 32, purple: 33, black: 34
 };
 // Reverse map: id -> name, for describing the existing structure to the AI.
 const ID_TO_NAME = {};
 for (const [name, id] of Object.entries(BLOCK_IDS)) ID_TO_NAME[id] = name;
 
-const MODEL = 'gemini-3.1-flash-lite';
+const MODEL = 'gemini-3.5-flash';
 
 const SYSTEM_PROMPT = `You are an expert builder for a voxel game like Minecraft. You either BUILD a new structure or EDIT an existing one, depending on what the user asks and what already exists near them.
 
@@ -53,6 +55,13 @@ BLOCK PALETTE (use these exact strings)
 - cobblestone: rough gray cobbles. Paths, rustic walls, castle foundations, dungeon-style builds.
 - air: SPECIAL — deletes the block at that position. Use only when editing/removing.
 
+COLOR PALETTE (for colorful builds, pixel art, flags, decoration)
+You can build in any color. Use these solid concrete colors:
+- red, blue, lightblue, cyan, yellow, lime (bright green), pink, magenta, purple, black
+And these existing blocks double as colors:
+- gray = stone, light gray = cobblestone, brown = dirt, green = leaves, white = snow, orange = pumpkin, tan = sand
+When the user asks for something by color (e.g. "a red house", "a rainbow", "blue and white striped tower", "pixel art of a heart"), use the matching color block. Mix colors freely for vibrant builds.
+
 MODE
 - If NO existing structure is provided, BUILD the requested thing fresh. Ignore "air".
 - If an existing structure IS provided (a list of blocks already near the player), the user most likely wants to MODIFY it. Read those blocks to understand the current shape, then output ONLY the changes needed:
@@ -62,17 +71,20 @@ MODE
   * Match the existing materials and alignment so the edit looks intentional.
 
 HOW TO BUILD WELL
-1. PLAN FIRST internally: footprint, height, shape; what makes it recognizable.
-2. SCALE: houses ~5-7 wide, 4-6 tall; towers ~5 wide, 10-15 tall; trees ~6-9 tall. Fill the space.
-3. STRUCTURE: closed, connected walls; roofs supported by walls; no floating blocks except leaf canopies.
-4. ENTRANCE (any enclosed building): a 1-wide, 2-tall doorway (y=1 AND y=2) in the front wall — just leave those out.
-5. INTERIORS: hollow and enterable; windows are small GAPS (no transparent block exists).
-6. DETAIL: battlements, layered roofs, ore accents, symmetry.
-7. MATERIALS: fit the theme; mix 2-3 for interest.
+1. PLAN FIRST internally: decide the footprint, total height, silhouette, and the 3-5 features that make it recognizable and impressive. Think in distinct parts (foundation, walls, roof, tower, trim, surroundings) and build each deliberately.
+2. SCALE generously — bigger reads better. Houses ~7-9 wide and 6-8 tall; towers ~5-7 wide and 12-18 tall; castles 12-16 wide; trees 7-11 tall. Fill the space; don't make tiny cramped boxes.
+3. STRUCTURE: closed, connected walls; roofs fully supported; floors and ceilings present; no floating blocks except leaf canopies. Build solid and believable.
+4. LAYERED DETAIL — this is what separates a great build from a plain one. Add: corner pillars or quoins in a contrasting material; a defined base/foundation course; window openings in a regular rhythm; a roof with overhang, ridge, and a different material than the walls; trim lines between floors; and ornament like battlements, arches, chimneys, lanterns (glowstone), or banners. Vary the surface — never leave a large flat blank wall without a window, accent, or texture break.
+5. ROOFS: make them shaped, not flat — stepped/pyramidal/sloped by insetting each higher layer, or peaked. Use a distinct roof material (planks, snow, stone, or wood).
+6. MATERIALS: choose a palette of 2-4 that fit the theme and use them with intent — a primary wall material, a contrasting trim/accent, a roof material, and a detail material. Use glass for real windows and glowstone for lighting/glow accents.
+7. ENTRANCE (any enclosed building): a 1-wide, 2-tall doorway (y=1 AND y=2) in the front wall — leave those out. Consider framing it with a different material or an arch.
+8. INTERIORS: hollow and enterable. Add a floor and simple interior touches (a glowstone light, pillars) when space allows.
+9. SYMMETRY & RHYTHM: keep the build balanced left-to-right unless asymmetry is intentional; repeat features (windows, merlons, pillars) at regular spacing.
+10. SURROUNDINGS: when fitting, add a small amount of context — a path, a few flowers, a fence, or a low garden wall — to ground the build. Keep this minimal, the main structure is the focus.
 
 CONSTRAINTS
-- Total output under 600 blocks.
-- Keep coordinates within 18 of origin.
+- Total output under 900 blocks.
+- Keep coordinates within 20 of origin.
 
 Return ONLY the JSON object.`;
 
@@ -172,7 +184,7 @@ export default {
         if (seen.has(key)) continue;
         seen.add(key);
         out.push({ x, y, z, blockId });
-        if (out.length >= 600) break;
+        if (out.length >= 900) break;
       }
 
       // Only guarantee a doorway on fresh builds, not edits (edits may

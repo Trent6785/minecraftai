@@ -52,6 +52,16 @@ const textures = {
   melonSide: loadAtlasTile('textures/melon.png', 0, 2), // left tile
   melonTop: loadAtlasTile('textures/melon.png', 1, 2),  // right tile
   cobblestone: loadTexture('textures/cobblestone.png'),
+  red: loadTexture('textures/red.png'),
+  blue: loadTexture('textures/blue.png'),
+  lightblue: loadTexture('textures/lightblue.png'),
+  cyan: loadTexture('textures/cyan.png'),
+  yellow: loadTexture('textures/yellow.png'),
+  lime: loadTexture('textures/lime.png'),
+  pink: loadTexture('textures/pink.png'),
+  magenta: loadTexture('textures/magenta.png'),
+  purple: loadTexture('textures/purple.png'),
+  black: loadTexture('textures/black.png'),
 };
 
 export const blocks = {
@@ -274,6 +284,66 @@ export const blocks = {
     name: 'cobblestone',
     visible: true,
     material: new THREE.MeshLambertMaterial({ map: textures.cobblestone })
+  },
+  red: {
+    id: 25,
+    name: 'red',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.red })
+  },
+  blue: {
+    id: 26,
+    name: 'blue',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.blue })
+  },
+  lightblue: {
+    id: 27,
+    name: 'lightblue',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.lightblue })
+  },
+  cyan: {
+    id: 28,
+    name: 'cyan',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.cyan })
+  },
+  yellow: {
+    id: 29,
+    name: 'yellow',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.yellow })
+  },
+  lime: {
+    id: 30,
+    name: 'lime',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.lime })
+  },
+  pink: {
+    id: 31,
+    name: 'pink',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.pink })
+  },
+  magenta: {
+    id: 32,
+    name: 'magenta',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.magenta })
+  },
+  purple: {
+    id: 33,
+    name: 'purple',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.purple })
+  },
+  black: {
+    id: 34,
+    name: 'black',
+    visible: true,
+    material: new THREE.MeshLambertMaterial({ map: textures.black })
   },
 };
 
