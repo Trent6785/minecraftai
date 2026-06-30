@@ -95,6 +95,17 @@ export class Physics {
             const block = { x, y, z };
             candidates.push(block);
             this.addCollisionHelper(block);
+            continue;
+          }
+          // A CLOSED door blocks its cell (both the bottom and top halves).
+          // Open doors are passable. doorManager is set on this physics instance.
+          if (this.doorManager) {
+            const door = this.doorManager.doorAt(x, y, z);
+            if (door && !door.open) {
+              const block = { x, y, z };
+              candidates.push(block);
+              this.addCollisionHelper(block);
+            }
           }
         }
       }

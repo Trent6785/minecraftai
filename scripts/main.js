@@ -224,6 +224,7 @@ setupLights();
 
 // ---- Doors (Stage 1: render test) ----
 const doorManager = new DoorManager(scene);
+physics.doorManager = doorManager; // so closed doors block movement
 // Drop a test door near spawn once chunks exist, to confirm it renders.
 setTimeout(() => {
   // Find ground near spawn and place a door standing on it.
