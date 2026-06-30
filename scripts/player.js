@@ -13,13 +13,7 @@ export class Player {
   jumpSpeed = 10;
   sprinting = false;
   onGround = false;
-
-  // --- Fly / creative mode ---
-  flying = false;
-  flySpeed = 12;          // horizontal + vertical speed while flying (faster than walking)
-  #lastSpaceTap = 0;      // timestamp of last space press, for double-tap detection
-  movingUp = false;       // holding space while flying
-  movingDown = false;     // holding shift while flying
+  readOnly = false;   // spectator mode: can't place/break blocks
 
   input = new THREE.Vector3();
   velocity = new THREE.Vector3();
@@ -156,26 +150,11 @@ export class Player {
    */
   applyInputs(dt) {
     if (this.controls.isLocked === true) {
-      if (this.flying) {
-        // Flying: faster horizontal movement, no gravity; space/shift = up/down.
-        const fly = this.flySpeed / this.maxSpeed;
-        this.velocity.x = this.input.x * fly;
-        this.velocity.z = this.input.z * fly;
-        this.controls.moveRight(this.velocity.x * dt);
-        this.controls.moveForward(this.velocity.z * dt);
-
-        let vy = 0;
-        if (this.movingUp) vy += this.flySpeed;
-        if (this.movingDown) vy -= this.flySpeed;
-        this.position.y += vy * dt;
-        this.velocity.y = 0; // cancel any leftover gravity velocity
-      } else {
-        this.velocity.x = this.input.x * (this.sprinting ? 1.5 : 1);
-        this.velocity.z = this.input.z * (this.sprinting ? 1.5 : 1);
-        this.controls.moveRight(this.velocity.x * dt);
-        this.controls.moveForward(this.velocity.z * dt);
-        this.position.y += this.velocity.y * dt;
-      }
+      this.velocity.x = this.input.x * (this.sprinting ? 1.5 : 1);
+      this.velocity.z = this.input.z * (this.sprinting ? 1.5 : 1);
+      this.controls.moveRight(this.velocity.x * dt);
+      this.controls.moveForward(this.velocity.z * dt);
+      this.position.y += this.velocity.y * dt;
 
       if (this.position.y < 0) {
         this.position.y = 0;
@@ -297,32 +276,12 @@ export class Player {
       case 'ShiftLeft':
       case 'ShiftRight':
         this.sprinting = true;
-        if (this.flying) this.movingDown = true; // hold shift to descend
         break;
-      case 'Space': {
-        // Ignore auto-repeat from holding the key down.
-        if (event.repeat) {
-          if (this.flying) this.movingUp = true;
-          break;
-        }
-        // Double-tap detection: two space presses within 300ms toggles fly mode.
-        const now = performance.now();
-        if (now - this.#lastSpaceTap < 300) {
-          this.flying = !this.flying;
-          this.velocity.set(0, 0, 0);
-          this.movingUp = false;
-          this.movingDown = false;
-          this.#lastSpaceTap = 0; // reset so a third tap doesn't immediately re-toggle
-        } else {
-          this.#lastSpaceTap = now;
-          if (this.flying) {
-            this.movingUp = true;     // hold space to rise
-          } else if (this.onGround) {
-            this.velocity.y += this.jumpSpeed; // normal jump
-          }
+      case 'Space':
+        if (this.onGround) {
+          this.velocity.y += this.jumpSpeed;
         }
         break;
-      }
       case 'F10':
         this.debugCamera = true;
         this.controls.unlock();
@@ -336,9 +295,6 @@ export class Player {
    */
   onKeyUp(event) {
     switch (event.code) {
-      case 'Space':
-        this.movingUp = false;
-        break;
       case 'KeyW':
         this.input.z = 0;
         break;
@@ -354,7 +310,6 @@ export class Player {
       case 'ShiftLeft':
       case 'ShiftRight':
         this.sprinting = false;
-        this.movingDown = false;
         break;
     }
   }
@@ -364,6 +319,7 @@ export class Player {
    * @param {MouseEvent} event 
    */
   onMouseDown(event) {
+    if (this.readOnly) return;   // spectators can't edit
     if (this.controls.isLocked) {
       // Is a block selected?
       if (this.selectedCoords) {

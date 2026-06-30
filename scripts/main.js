@@ -7,7 +7,7 @@ import { Physics } from './physics';
 import { setupUI } from './ui';
 import { ModelLoader } from './modelLoader';
 import { Avatar } from './avatar';
-import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed } from './multiplayer';
+import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed, hostWorld, loadHostedWorld, getViewCode, getMyHostCode } from './multiplayer';
 
 // UI Setup
 const stats = new Stats();
@@ -214,7 +214,12 @@ function showAvatarScreen() {
 
 // If the URL already has a ?room= code, this is someone joining a shared
 // world — skip the mode menu and go straight to the avatar screen in MP mode.
-if (roomExistsInUrl()) {
+const viewCode = getViewCode();
+if (viewCode) {
+  // Spectator mode: load a hosted read-only snapshot and skip all menus.
+  gameMode = 'spectator';
+  startSpectatorMode(viewCode);
+} else if (roomExistsInUrl()) {
   gameMode = 'multiplayer';
   showAvatarScreen();
 } else {
@@ -230,6 +235,28 @@ if (roomExistsInUrl()) {
     window.history.replaceState({}, '', url);
     showAvatarScreen();
   });
+}
+
+// Load a hosted snapshot and enter the world read-only.
+async function startSpectatorMode(code) {
+  document.getElementById('mode-menu').style.display = 'none';
+  const status = document.getElementById('status');
+  status.innerHTML = 'Loading hosted world...';
+  try {
+    const snapshot = await loadHostedWorld(code);
+    if (!snapshot) {
+      status.innerHTML = 'Hosted world not found.';
+      return;
+    }
+    world.applySnapshot(snapshot);
+    player.readOnly = true;        // spectators can't edit
+    status.innerHTML = 'VIEWING (read-only)';
+    setTimeout(() => { status.innerHTML = ''; }, 4000);
+    enterGame();
+  } catch (err) {
+    console.error('[host] failed to load hosted world:', err);
+    status.innerHTML = 'Failed to load hosted world.';
+  }
 }
 
 // "Play" button on the avatar screen — start the chosen mode.
@@ -325,16 +352,43 @@ function setupMultiplayerHost(showHost) {
   }
 }
 
-// Placeholder — full read-only hosting is Stage 3.
+// Real read-only hosting (Stage 3).
 let hostWired = false;
 function setupHostButton() {
   if (hostWired) return;
   hostWired = true;
   const hostBtn = document.getElementById('host-btn');
-  hostBtn.addEventListener('click', () => {
-    const popup = document.getElementById('share-popup');
+  const popup = document.getElementById('share-popup');
+
+  hostBtn.addEventListener('click', async () => {
+    const existing = getMyHostCode();
+    // If we've hosted before, ask whether to update or make new.
+    let updateExisting = false;
+    if (existing) {
+      updateExisting = confirm(
+        'You already have a hosted world.\n\nOK = update that existing link\nCancel = create a new link'
+      );
+    }
+
     popup.style.display = 'block';
-    popup.innerHTML = 'Read-only hosting coming soon (Stage 3).';
+    popup.innerHTML = 'Publishing world...';
+    try {
+      const snapshot = world.getSnapshot();
+      const code = await hostWorld(snapshot, updateExisting);
+      const link = `${window.location.origin}${window.location.pathname}?view=${code}`;
+      popup.innerHTML =
+        '<b>Read-only world published!</b><br>' +
+        'Anyone with this link can view (not edit):<br>' +
+        `<a href="${link}" target="_blank">${link}</a><br>` +
+        '<button id="copy-host-link">Copy link</button>';
+      document.getElementById('copy-host-link').onclick = () => {
+        navigator.clipboard?.writeText(link);
+        document.getElementById('copy-host-link').textContent = 'Copied!';
+      };
+    } catch (err) {
+      console.error('[host] publish failed:', err);
+      popup.innerHTML = 'Failed to publish world.';
+    }
   });
 }
 
@@ -638,6 +692,7 @@ buildInput.addEventListener('keydown', (ev) => {
 // Press B to open the builder; N to undo last build.
 document.addEventListener('keydown', (ev) => {
   if (ev.code === 'KeyB' && !builderOpen && player.controls.isLocked) {
+    if (player.readOnly) return;   // spectators can't AI-build
     ev.preventDefault();
     openBuilder();
   }

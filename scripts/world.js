@@ -93,6 +93,27 @@ export class World extends THREE.Group {
   }
 
   /**
+   * Returns a serializable snapshot of this world (seed + block edits),
+   * used for read-only hosting.
+   */
+  getSnapshot() {
+    return {
+      seed: this.params.seed,
+      data: this.dataStore.data
+    };
+  }
+
+  /**
+   * Applies a hosted snapshot (seed + edits) and regenerates.
+   */
+  applySnapshot(snapshot) {
+    this.params.seed = snapshot.seed;
+    this.seed = snapshot.seed;
+    this.dataStore.data = snapshot.data || {};
+    this.generate();
+  }
+
+  /**
    * Saves the world data to local storage
    */
   save() {

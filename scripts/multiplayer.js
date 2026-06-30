@@ -77,6 +77,62 @@ export function closeRoom() {
   remove(roomRef);
 }
 
+// ---- Read-only hosted worlds (Stage 3) ----
+
+function makeHostCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += chars[Math.floor(Math.random() * chars.length)];
+  return s;
+}
+
+// Remember the host code we last published, so re-hosting can update it.
+let myHostCode = localStorage.getItem('mc_host_code') || null;
+export function getMyHostCode() { return myHostCode; }
+
+/**
+ * Publish a read-only snapshot of the world to Firebase.
+ * @param {object} snapshot  { seed, data } from world.getSnapshot()
+ * @param {boolean} updateExisting  if true and we have a prior code, overwrite it
+ * @returns {Promise<string>}  the host code
+ */
+export async function hostWorld(snapshot, updateExisting) {
+  const code = (updateExisting && myHostCode) ? myHostCode : makeHostCode();
+  // A stable owner id per browser, so only we can overwrite our hosted world.
+  let owner = localStorage.getItem('mc_owner_id');
+  if (!owner) {
+    owner = 'o_' + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem('mc_owner_id', owner);
+  }
+  const hostedRef = ref(db, `hosted/${code}`);
+  await set(hostedRef, {
+    owner,
+    seed: snapshot.seed,
+    data: snapshot.data || {},
+    createdAt: Date.now()
+  });
+  myHostCode = code;
+  localStorage.setItem('mc_host_code', code);
+  return code;
+}
+
+/**
+ * Load a hosted snapshot by code.
+ * @returns {Promise<{seed:number,data:object}|null>}
+ */
+export async function loadHostedWorld(code) {
+  const snap = await get(ref(db, `hosted/${code}`));
+  if (!snap.exists()) return null;
+  const val = snap.val();
+  return { seed: val.seed, data: val.data || {} };
+}
+
+// Read the ?view=CODE param (spectator mode) from the URL.
+export function getViewCode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('view');
+}
+
 const remotePlayers = new Map();
 
 let _scene = null;
