@@ -64,11 +64,13 @@ export class DoorManager {
     const pivot = new THREE.Group();
     pivot.add(mesh);
 
-    // Position the pivot at the hinge edge of the cell, vertically centered
-    // over the 2-tall span (y to y+1), and at the cell's depth center.
+    // Position the pivot at the hinge edge of the cell. DOOR_Y_OFFSET nudges the
+    // door up/down so it rests exactly on the floor. If the door clips into the
+    // ground, increase this; if it floats, decrease it.
+    const DOOR_Y_OFFSET = 0.5;
     pivot.position.set(
-      x + 0.5 - hingeSign * 0.5,  // hinge edge x
-      y + 1.0,                    // center of the 2-tall door (cells y and y+1)
+      x + 0.5 - hingeSign * 0.5,          // hinge edge x
+      y + 1.0 + DOOR_Y_OFFSET,            // vertical center
       z + 0.5
     );
     pivot.rotation.y = FACING_YAW[facing] ?? 0;

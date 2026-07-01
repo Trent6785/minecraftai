@@ -405,6 +405,16 @@ export class World extends THREE.Group {
       if (this.onAnyEdit && !this._applyingRemote) {
         this.onAnyEdit('break', x, y, z, 0);
       }
+
+      // If a plant (flower/mushroom) was sitting on this block, it would now
+      // float — remove it too.
+      const above = this.getBlock(x, y + 1, z);
+      if (above && above.id !== blocks.empty.id) {
+        const def = Object.values(blocks).find(b => b.id === above.id);
+        if (def?.isPlant) {
+          this.removeBlock(x, y + 1, z);
+        }
+      }
     }
   }
 
