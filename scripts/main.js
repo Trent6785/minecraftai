@@ -228,6 +228,10 @@ physics.doorManager = doorManager; // so closed doors block movement
 
 // Place a door locally and (optionally) broadcast it.
 function placeDoor(x, y, z, facing = 'south', hinge = 'left', broadcast = true) {
+  // Clear the two cells the door occupies (y and y+1) so it's never buried in
+  // a wall block the AI may have placed there.
+  if (world.getBlock(x, y, z)?.id) world.removeBlock(x, y, z);
+  if (world.getBlock(x, y + 1, z)?.id) world.removeBlock(x, y + 1, z);
   doorManager.addDoor(x, y, z, facing, hinge);
   if (broadcast) syncDoorPlace(x, y, z, facing, hinge);
 }
