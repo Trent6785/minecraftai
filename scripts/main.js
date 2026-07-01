@@ -82,6 +82,7 @@ const SURFACE_Y = 10;        // approx ground level; below this depth dimming st
 const DARK_DEPTH = 14;       // blocks down until fully dark underground
 
 let dayTime = DAY_LENGTH * 0.30; // start mid-morning
+let dayNightPaused = false;
 
 // Reusable colors to avoid per-frame allocation.
 const _skyDay = new THREE.Color(0x80a0e0);
@@ -94,7 +95,7 @@ const _tmpSky = new THREE.Color();
 const _tmpSun = new THREE.Color();
 
 function updateDayNight(dt) {
-  dayTime = (dayTime + dt) % DAY_LENGTH;
+  if (!dayNightPaused) dayTime = (dayTime + dt) % DAY_LENGTH;
   // phase: 0 = midnight, 0.25 = sunrise, 0.5 = noon, 0.75 = sunset.
   const phase = dayTime / DAY_LENGTH;
   const angle = phase * Math.PI * 2;
@@ -584,6 +585,52 @@ function setupHostButton() {
     }
   });
 }
+
+// ---- Settings menu ----
+const settingsGear = document.getElementById('settings-gear');
+const settingsPanel = document.getElementById('settings-panel');
+
+// Show the gear once the player starts playing.
+player.controls.addEventListener('lock', () => {
+  settingsGear.style.display = 'block';
+});
+
+settingsGear.addEventListener('click', () => {
+  const open = settingsPanel.style.display === 'block';
+  settingsPanel.style.display = open ? 'none' : 'block';
+  // Opening settings requires the mouse, so unlock pointer while it's open.
+  if (!open && player.controls.isLocked) player.controls.unlock();
+});
+document.getElementById('settings-close').addEventListener('click', () => {
+  settingsPanel.style.display = 'none';
+});
+
+// Sound volume + mute.
+document.getElementById('set-volume').addEventListener('input', (e) => {
+  sounds.masterVolume = e.target.value / 100;
+});
+document.getElementById('set-mute').addEventListener('change', (e) => {
+  sounds.enabled = !e.target.checked;
+});
+
+// Day/night pause + time.
+document.getElementById('set-daynight-pause').addEventListener('change', (e) => {
+  dayNightPaused = e.target.checked;
+});
+document.getElementById('set-time').addEventListener('input', (e) => {
+  dayTime = (e.target.value / 100) * DAY_LENGTH;
+});
+
+// Field of view.
+document.getElementById('set-fov').addEventListener('input', (e) => {
+  player.camera.fov = Number(e.target.value);
+  player.camera.updateProjectionMatrix();
+});
+
+// Mouse sensitivity (PointerLockControls.pointerSpeed).
+document.getElementById('set-sensitivity').addEventListener('input', (e) => {
+  player.controls.pointerSpeed = e.target.value / 100;
+});
 
 animate();
 

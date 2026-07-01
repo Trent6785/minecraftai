@@ -107,6 +107,39 @@
   <div id="status"></div>
   <button id="host-btn" style="display:none;">Host (Share Read-Only)</button>
   <button id="close-room-btn" style="display:none;">Close Room</button>
+  <button id="settings-gear" title="Settings">&#9881;</button>
+  <div id="settings-panel" style="display:none;">
+    <h3>Settings</h3>
+
+    <div class="setting-row">
+      <label>Sound Volume</label>
+      <input type="range" id="set-volume" min="0" max="100" value="100">
+    </div>
+    <div class="setting-row">
+      <label>Mute</label>
+      <input type="checkbox" id="set-mute">
+    </div>
+
+    <div class="setting-row">
+      <label>Pause Day/Night</label>
+      <input type="checkbox" id="set-daynight-pause">
+    </div>
+    <div class="setting-row">
+      <label>Time of Day</label>
+      <input type="range" id="set-time" min="0" max="100" value="30">
+    </div>
+
+    <div class="setting-row">
+      <label>Field of View</label>
+      <input type="range" id="set-fov" min="50" max="110" value="75">
+    </div>
+    <div class="setting-row">
+      <label>Mouse Sensitivity</label>
+      <input type="range" id="set-sensitivity" min="20" max="200" value="100">
+    </div>
+
+    <button id="settings-close">Close</button>
+  </div>
   <div id="share-popup" style="display:none;"></div>
   <script type="module" src="./scripts/main.js"></script>
 </body>

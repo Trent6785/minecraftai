@@ -5,6 +5,7 @@ class Sounds {
   constructor() {
     this.buffers = {};
     this.enabled = true;
+    this.masterVolume = 1.0;
     // Preload by creating Audio elements we can clone for overlapping plays.
     this.sources = {
       place: 'sounds/place.wav',
@@ -29,7 +30,7 @@ class Sounds {
     try {
       // Clone so rapid repeats (e.g. footsteps) can overlap.
       const a = template.cloneNode();
-      a.volume = volume;
+      a.volume = Math.max(0, Math.min(1, volume * this.masterVolume));
       const p = a.play();
       if (p && p.catch) p.catch(() => {}); // ignore autoplay rejections
     } catch (e) {
