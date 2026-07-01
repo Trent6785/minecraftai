@@ -270,9 +270,13 @@ export function initMultiplayer(scene, world, localPlayer) {
   listenForDoors();
 
   // --- Detect the room being closed (host force-close, or it vanishing) ---
+  // Only treat it as "closed" if the seed EXISTED and then disappeared — not on
+  // the very first callback (which can arrive before the seed is written).
+  let _seedWasPresent = false;
   onValue(seedRef, (snap) => {
-    if (!snap.exists() && joined) {
-      // Seed gone => room was deleted. Boot back to menu.
+    if (snap.exists()) {
+      _seedWasPresent = true;
+    } else if (_seedWasPresent && joined) {
       console.log('[mp] room closed');
       if (onRoomClosed) onRoomClosed();
     }
