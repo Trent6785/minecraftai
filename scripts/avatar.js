@@ -179,7 +179,7 @@ export class Avatar {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const fontSize = 48;
-    ctx.font = `${fontSize}px sans-serif`;
+    ctx.font = `${fontSize}px 'Minecraft', sans-serif`;
     const textW = ctx.measureText(name).width;
     canvas.width = textW + 40;
     canvas.height = fontSize + 24;
@@ -188,7 +188,7 @@ export class Avatar {
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     // Text.
-    ctx.font = `${fontSize}px sans-serif`;
+    ctx.font = `${fontSize}px 'Minecraft', sans-serif`;
     ctx.fillStyle = '#ffffff';
     ctx.textBaseline = 'middle';
     ctx.fillText(name, 20, canvas.height / 2);

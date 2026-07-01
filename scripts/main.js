@@ -461,6 +461,7 @@ document.getElementById('btn-play').addEventListener('click', async () => {
   const nameInput = document.getElementById('player-name-input');
   setMyName(nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Player');
 
+
   if (gameMode === 'multiplayer') {
     // Shared seed: first player sets it (and becomes host), others read it.
     let amCreator = false;
@@ -631,8 +632,9 @@ document.getElementById('set-sensitivity').addEventListener('input', (e) => {
   player.controls.pointerSpeed = e.target.value / 100;
 });
 
-// AI build model choice (sent with each build request).
-let aiModel = 'gemini-3.5-flash';
+// AI build model choice (sent with each build request). Defaults to the
+// cheaper lite model to control API costs; users can switch in settings.
+let aiModel = 'gemini-3.1-flash-lite';
 document.getElementById('set-model').addEventListener('change', (e) => {
   aiModel = e.target.value;
 });
@@ -922,6 +924,11 @@ async function runBuild() {
     });
     const data = await res.json();
     if (data.error) {
+      // Daily build limit reached — show the friendly message from the Worker.
+      if (res.status === 429 && data.message) {
+        buildStatus.textContent = data.message;
+        return;
+      }
       // A 502/503 or "overloaded/unavailable" means Gemini is under heavy load,
       // not a real failure — show a friendly message instead of "Error".
       const detail = (data.detail || '') + ' ' + (data.error || '');

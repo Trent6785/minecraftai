@@ -1,3 +1,6 @@
 name = "minecraft-ai-builder"
 main = "index.js"
 compatibility_date = "2024-09-01"
+[[kv_namespaces]]
+binding = "BUILD_LIMITS"
+id = "a857df935a134144a0c794a17316681b"

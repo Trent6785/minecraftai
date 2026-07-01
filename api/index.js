@@ -110,6 +110,29 @@ export default {
       return json({ error: 'Empty prompt' }, 400);
     }
 
+    // --- Daily per-IP build limit (cost protection) ---
+    // Requires a KV namespace bound as BUILD_LIMITS in wrangler.toml.
+    const DAILY_LIMIT = 10;
+    if (env.BUILD_LIMITS) {
+      try {
+        const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+        const key = `${ip}:${today}`;
+        const used = parseInt(await env.BUILD_LIMITS.get(key) || '0', 10);
+        if (used >= DAILY_LIMIT) {
+          return json({
+            error: 'Daily build limit reached',
+            limit: DAILY_LIMIT,
+            message: `You've used all ${DAILY_LIMIT} AI builds for today. Come back tomorrow!`
+          }, 429);
+        }
+        // Count this build. Expire the key after ~2 days so KV stays clean.
+        await env.BUILD_LIMITS.put(key, String(used + 1), { expirationTtl: 172800 });
+      } catch (e) {
+        // If KV fails, don't block the build — just skip limiting this time.
+      }
+    }
+
     // Optional: existing blocks near the player, already as offsets from anchor.
     // Format from client: [{x,y,z,id}], we convert ids to names for the AI.
     const existing = Array.isArray(body.existing) ? body.existing : [];
