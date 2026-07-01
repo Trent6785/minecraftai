@@ -114,6 +114,10 @@ export default {
     // Format from client: [{x,y,z,id}], we convert ids to names for the AI.
     const existing = Array.isArray(body.existing) ? body.existing : [];
 
+    // Model choice from the client, restricted to two allowed models.
+    const ALLOWED_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+    const chosenModel = ALLOWED_MODELS.includes(body.model) ? body.model : MODEL;
+
     let userMessage = `Request: "${prompt}"`;
     if (existing.length > 0) {
       // Describe the existing structure compactly as name@(x,y,z).
@@ -140,7 +144,7 @@ export default {
         }
       });
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${env.GEMINI_API_KEY}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${chosenModel}:generateContent?key=${env.GEMINI_API_KEY}`;
 
       // Gemini occasionally returns transient errors (503 overloaded, 429 rate
       // limit, 500). Retry a few times with a short backoff so these blips don't

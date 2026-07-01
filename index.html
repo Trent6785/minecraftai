@@ -138,6 +138,14 @@
       <input type="range" id="set-sensitivity" min="20" max="200" value="100">
     </div>
 
+    <div class="setting-row" style="flex-direction:column; align-items:stretch; gap:6px;">
+      <label>AI Build Model</label>
+      <select id="set-model">
+        <option value="gemini-3.5-flash">Better quality (slower)</option>
+        <option value="gemini-3.1-flash-lite">Faster (lower quality)</option>
+      </select>
+    </div>
+
     <button id="settings-close">Close</button>
   </div>
   <div id="share-popup" style="display:none;"></div>

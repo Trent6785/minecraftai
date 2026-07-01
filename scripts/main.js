@@ -627,6 +627,12 @@ document.getElementById('set-sensitivity').addEventListener('input', (e) => {
   player.controls.pointerSpeed = e.target.value / 100;
 });
 
+// AI build model choice (sent with each build request).
+let aiModel = 'gemini-3.5-flash';
+document.getElementById('set-model').addEventListener('change', (e) => {
+  aiModel = e.target.value;
+});
+
 animate();
 
 // ============================================================
@@ -906,7 +912,8 @@ async function runBuild() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         prompt,
-        existing: isEdit ? scan.existing : []
+        existing: isEdit ? scan.existing : [],
+        model: aiModel
       })
     });
     const data = await res.json();
