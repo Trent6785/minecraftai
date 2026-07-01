@@ -183,9 +183,7 @@ function animate() {
   renderer.render(scene, (player.controls.isLocked || builderViewActive) ? player.camera : orbitCamera);
 
   // Third-person corner inset (top-right), only while actually playing.
-  // Rendered every other frame to halve its cost (it's a full second scene pass).
-  _cornerFrame = (_cornerFrame + 1) % 2;
-  if (selfAvatar && selfAvatar.ready && player.controls.isLocked && _cornerFrame === 0) {
+  if (selfAvatar && selfAvatar.ready && player.controls.isLocked) {
     const w = window.innerWidth, h = window.innerHeight;
     const insetW = Math.min(260, Math.floor(w * 0.22));
     const insetH = Math.floor(insetW * 0.85);
