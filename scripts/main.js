@@ -7,7 +7,7 @@ import { Physics } from './physics';
 import { setupUI } from './ui';
 import { ModelLoader } from './modelLoader';
 import { Avatar } from './avatar';
-import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed, hostWorld, loadHostedWorld, getViewCode, getMyHostCode, syncDoorPlace, syncDoorState, setOnRemoteDoor } from './multiplayer';
+import { initMultiplayer, updateMultiplayer, chooseAvatar, resolveSharedSeed, roomExistsInUrl, roomCode, isHost, closeRoom, setOnRoomClosed, hostWorld, loadHostedWorld, getViewCode, getMyHostCode, syncDoorPlace, syncDoorState, setOnRemoteDoor, setMyName } from './multiplayer';
 import { sounds } from './sounds';
 import { DoorManager } from './doors';
 
@@ -456,6 +456,10 @@ async function startSpectatorMode(code) {
 // "Play" button on the avatar screen — start the chosen mode.
 document.getElementById('btn-play').addEventListener('click', async () => {
   avatarMenu.style.display = 'none';
+
+  // Capture the entered name (defaults to Player).
+  const nameInput = document.getElementById('player-name-input');
+  setMyName(nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Player');
 
   if (gameMode === 'multiplayer') {
     // Shared seed: first player sets it (and becomes host), others read it.

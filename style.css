@@ -292,6 +292,18 @@ h1 .ai {
 
 .avatar-title { font-size: 1.6em; margin: 0; }
 
+#player-name-input {
+  padding: 10px 14px;
+  font-family: 'Minecraft', sans-serif;
+  font-size: 16px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #7a7a7a;
+  color: #fff;
+  text-align: center;
+  outline: none;
+  width: 240px;
+}
+
 /* Host button (top-left, singleplayer) */
 #host-btn {
   position: fixed;

@@ -170,6 +170,49 @@ export class Avatar {
     this.setMoving(dist > 0.02);
   }
 
+  /** Set/update a floating name tag above the avatar. */
+  setName(name) {
+    this.name = name;
+    if (!name) return;
+
+    // Render the name onto a canvas, use it as a sprite texture.
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const fontSize = 48;
+    ctx.font = `${fontSize}px sans-serif`;
+    const textW = ctx.measureText(name).width;
+    canvas.width = textW + 40;
+    canvas.height = fontSize + 24;
+
+    // Background pill.
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Text.
+    ctx.font = `${fontSize}px sans-serif`;
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 20, canvas.height / 2);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.minFilter = THREE.LinearFilter;
+
+    if (this.nameSprite) {
+      this.nameSprite.material.map?.dispose();
+      this.nameSprite.material.map = texture;
+      this.nameSprite.material.needsUpdate = true;
+    } else {
+      const mat = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+      this.nameSprite = new THREE.Sprite(mat);
+      this.root.add(this.nameSprite);
+    }
+    // Scale and position above the avatar's head.
+    const aspect = canvas.width / canvas.height;
+    const h = 0.4;
+    this.nameSprite.scale.set(h * aspect, h, 1);
+    this.nameSprite.position.set(0, this.targetHeight + 0.35, 0);
+    this.nameSprite.renderOrder = 999;
+  }
+
   /** Remove from scene and stop animation. Does NOT dispose geometry/materials/
    *  textures, because SkeletonUtils.clone() shares those with the cached model
    *  and other avatars of the same type — disposing them would corrupt those. */

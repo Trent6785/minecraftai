@@ -28,6 +28,11 @@ export function chooseAvatar(type) {
   if (type === 'steve' || type === 'alex') myAvatarType = type;
 }
 
+export let myName = 'Player';
+export function setMyName(name) {
+  myName = (name || 'Player').toString().slice(0, 16);
+}
+
 let joined = false;
 
 let playerRef = null;
@@ -205,6 +210,7 @@ export function initMultiplayer(scene, world, localPlayer) {
   set(playerRef, {
     id: playerId,
     avatar: myAvatarType,
+    name: myName,
     x: p.x, y: p.y, z: p.z,
     yaw: 0,
     t: Date.now()
@@ -296,6 +302,12 @@ function addRemotePlayer(data) {
   const avatar = new Avatar(_scene, data.avatar || 'steve', _localPlayer.height);
   avatar.setPosition(data.x, data.y - _localPlayer.height, data.z);
   avatar.setYaw(data.yaw || 0);
+  // Show their name above their head once the model is ready.
+  const applyName = () => {
+    if (avatar.ready) avatar.setName(data.name || 'Player');
+    else setTimeout(applyName, 150);
+  };
+  applyName();
   remotePlayers.set(data.id, { avatar, data });
 }
 
