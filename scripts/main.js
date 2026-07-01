@@ -644,6 +644,72 @@ document.getElementById('set-sensitivity').addEventListener('input', (e) => {
 // AI build model choice (sent with each build request). Defaults to the
 // cheaper lite model to control API costs; users can switch in settings.
 let aiModel = 'gemini-3.1-flash-lite';
+
+// ---- Inventory / block palette ----
+// All placeable blocks with their icon texture. (empty/pickaxe excluded.)
+const INVENTORY_BLOCKS = [
+  { id: 1, tex: 'grass.png' }, { id: 2, tex: 'dirt.png' }, { id: 3, tex: 'stone.png' },
+  { id: 4, tex: 'coal_ore.png' }, { id: 5, tex: 'iron_ore.png' }, { id: 6, tex: 'tree_side.png' },
+  { id: 7, tex: 'leaves.png' }, { id: 8, tex: 'sand.png' }, { id: 10, tex: 'snow.png' },
+  { id: 13, tex: 'cactus_side.png' }, { id: 15, tex: 'glass.png' }, { id: 16, tex: 'oakplank.png' },
+  { id: 17, tex: 'glowstone.png' }, { id: 18, tex: 'pumpkin.png' }, { id: 19, tex: 'redflower.png' },
+  { id: 20, tex: 'yellowflower.png' }, { id: 21, tex: 'mushroom.png' }, { id: 22, tex: 'brownmushroom.png' },
+  { id: 23, tex: 'melon.png' }, { id: 24, tex: 'cobblestone.png' },
+  { id: 25, tex: 'red.png' }, { id: 26, tex: 'blue.png' }, { id: 27, tex: 'lightblue.png' },
+  { id: 28, tex: 'cyan.png' }, { id: 29, tex: 'yellow.png' }, { id: 30, tex: 'lime.png' },
+  { id: 31, tex: 'pink.png' }, { id: 32, tex: 'magenta.png' }, { id: 33, tex: 'purple.png' },
+  { id: 34, tex: 'black.png' },
+];
+
+const inventoryOverlay = document.getElementById('inventory-overlay');
+const inventoryGrid = document.getElementById('inventory-grid');
+
+// Build the grid once.
+for (const b of INVENTORY_BLOCKS) {
+  const slot = document.createElement('div');
+  slot.className = 'inv-slot';
+  slot.dataset.id = b.id;
+  const img = document.createElement('img');
+  img.src = `textures/${b.tex}`;
+  img.onerror = () => { img.style.opacity = '0.3'; }; // missing texture: dim it
+  slot.appendChild(img);
+  slot.addEventListener('click', () => {
+    player.activeBlockId = b.id;
+    player.tool.container.visible = false; // holding a block, not the pickaxe
+    inventoryGrid.querySelectorAll('.inv-slot').forEach(s => s.classList.remove('selected'));
+    slot.classList.add('selected');
+    closeInventory();
+  });
+  inventoryGrid.appendChild(slot);
+}
+
+function openInventory() {
+  inventoryOverlay.style.display = 'flex';
+  inventoryOverlay.dataset.open = '1';
+  if (player.controls.isLocked) player.controls.unlock();
+}
+function closeInventory() {
+  inventoryOverlay.style.display = 'none';
+  delete inventoryOverlay.dataset.open;
+}
+
+// Toggle inventory with E. Only in-game (never while a full-screen menu is up).
+document.addEventListener('keydown', (ev) => {
+  const el = document.activeElement;
+  if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
+  if (ev.code !== 'KeyE') return;
+
+  if (inventoryOverlay.dataset.open) {
+    closeInventory();
+    return;
+  }
+  // Don't open on menu screens.
+  const menus = document.querySelectorAll('.fullscreen-menu');
+  for (const m of menus) {
+    if (getComputedStyle(m).display !== 'none') return;
+  }
+  openInventory();
+});
 document.getElementById('set-model').addEventListener('change', (e) => {
   aiModel = e.target.value;
 });
