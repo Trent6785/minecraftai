@@ -41,6 +41,56 @@
           <span class="menu-btn-sub">Create a room &amp; build with friends</span>
         </button>
       </div>
+      <button id="btn-howtoplay">How to Play</button>
+    </div>
+  </div>
+
+  <div id="howtoplay-menu" class="fullscreen-menu" style="display:none;">
+    <div class="menu-inner howto-inner">
+      <h1>How to Play</h1>
+
+      <div class="howto-section">
+        <h3>Controls</h3>
+        <div class="howto-controls">
+          <div><span class="key">W A S D</span> Move</div>
+          <div><span class="key">Space</span> Jump</div>
+          <div><span class="key">Space Space</span> Toggle fly mode</div>
+          <div><span class="key">Space / Shift</span> Fly up / down</div>
+          <div><span class="key">Left Click</span> Break block</div>
+          <div><span class="key">Right Click</span> Place block / open door</div>
+          <div><span class="key">1 - 8</span> Select block</div>
+          <div><span class="key">B</span> Open AI Builder</div>
+          <div><span class="key">N</span> Undo last AI build</div>
+          <div><span class="key">Esc</span> Release mouse</div>
+        </div>
+      </div>
+
+      <div class="howto-section">
+        <h3>Building with AI</h3>
+        <p>Press <span class="key">B</span> and type what you want — like "a cozy cottage," "a stone castle," or "a rainbow." The AI builds it in front of you, blocks and all. You can also edit existing builds by describing changes.</p>
+      </div>
+
+      <div class="howto-section">
+        <h3>AI Build Models</h3>
+        <p>In Settings (the gear icon) you can choose between two AI models. Here's the difference, same prompt — <em>"a cozy cottage"</em>:</p>
+        <div class="model-compare">
+          <div class="model-col">
+            <h4>Faster (default)</h4>
+            <p class="model-note">Gemini 3.1 Flash-Lite — quick, simpler builds, lower cost.</p>
+            <!-- Replace src with your screenshot of the lite model's cottage -->
+            <img src="howto/cottage_lite.png" alt="Cottage built by the faster model" class="compare-img" />
+          </div>
+          <div class="model-col">
+            <h4>Better Quality</h4>
+            <p class="model-note">Gemini 3.5 Flash — slower, more detailed and coherent builds.</p>
+            <!-- Replace src with your screenshot of the better model's cottage -->
+            <img src="howto/cottage_better.png" alt="Cottage built by the better model" class="compare-img" />
+          </div>
+        </div>
+        <p class="model-tip">Tip: There's a limit of 10 AI builds per day. The Faster model is the default to keep things quick — switch to Better Quality in Settings when you want more detailed builds.</p>
+      </div>
+
+      <button id="btn-howto-back">Back</button>
     </div>
   </div>
 

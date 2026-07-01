@@ -391,6 +391,17 @@ let mpJoined = false;
 const modeMenu = document.getElementById('mode-menu');
 const avatarMenu = document.getElementById('avatar-menu');
 
+// How to Play page open/close.
+const howtoMenu = document.getElementById('howtoplay-menu');
+document.getElementById('btn-howtoplay').addEventListener('click', () => {
+  modeMenu.style.display = 'none';
+  howtoMenu.style.display = 'flex';
+});
+document.getElementById('btn-howto-back').addEventListener('click', () => {
+  howtoMenu.style.display = 'none';
+  modeMenu.style.display = 'flex';
+});
+
 // Avatar card selection (on the avatar screen).
 const avatarCards = document.querySelectorAll('.avatar-card');
 avatarCards.forEach((card) => {

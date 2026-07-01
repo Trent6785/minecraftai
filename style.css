@@ -240,7 +240,100 @@ h1 .ai {
 }
 #settings-close:hover { background: rgba(150,150,150,0.95); }
 
-/* Fullscreen menus (mode select, avatar select) */
+/* How to Play page */
+#btn-howtoplay {
+  margin-top: 20px;
+  padding: 10px 24px;
+  font-family: 'Minecraft', sans-serif;
+  font-size: 15px;
+  background: rgba(120,120,120,0.85);
+  border: 2px solid #5a5a5a;
+  border-bottom-width: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+#btn-howtoplay:hover { background: rgba(150,150,150,0.95); }
+
+.howto-inner {
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+  text-align: left;
+  padding: 24px;
+}
+.howto-inner h1 { text-align: center; }
+.howto-section { margin-bottom: 24px; }
+.howto-section h3 {
+  font-size: 20px;
+  margin: 0 0 10px 0;
+  color: #e2552f;
+}
+.howto-section p { line-height: 1.5; font-size: 14px; }
+.howto-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+  font-size: 14px;
+}
+.howto-controls .key {
+  display: inline-block;
+  min-width: 60px;
+  padding: 2px 8px;
+  margin-right: 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-bottom-width: 3px;
+  text-align: center;
+  font-size: 12px;
+}
+.key {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-bottom-width: 3px;
+  font-size: 12px;
+}
+.model-compare {
+  display: flex;
+  gap: 16px;
+  margin: 14px 0;
+}
+.model-col {
+  flex: 1;
+  background: rgba(0,0,0,0.35);
+  padding: 12px;
+  border: 1px solid #555;
+}
+.model-col h4 { margin: 0 0 6px 0; font-size: 16px; }
+.model-note { font-size: 12px; color: #bbb; margin: 0 0 10px 0; }
+.compare-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  image-rendering: pixelated;
+  border: 1px solid #444;
+}
+.model-tip {
+  font-size: 13px;
+  color: #ddd;
+  background: rgba(226,85,47,0.15);
+  padding: 10px;
+  border-left: 3px solid #e2552f;
+}
+#btn-howto-back {
+  display: block;
+  margin: 8px auto 0;
+  padding: 10px 32px;
+  font-family: 'Minecraft', sans-serif;
+  font-size: 15px;
+  background: rgba(120,120,120,0.85);
+  border: 2px solid #5a5a5a;
+  border-bottom-width: 4px;
+  color: #fff;
+  cursor: pointer;
+}
+#btn-howto-back:hover { background: rgba(150,150,150,0.95); }
 .fullscreen-menu {
   position: fixed;
   inset: 0;
