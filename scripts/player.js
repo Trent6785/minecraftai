@@ -5,6 +5,17 @@ import { blocks } from './blocks';
 
 const CENTER_SCREEN = new THREE.Vector2();
 
+// True if any full-screen menu overlay is currently visible.
+function isAnyMenuOpen() {
+  const menus = document.querySelectorAll('.fullscreen-menu');
+  for (const m of menus) {
+    if (m.style.display !== 'none' && getComputedStyle(m).display !== 'none') {
+      return true;
+    }
+  }
+  return false;
+}
+
 export class Player {
   height = 1.75;
   radius = 0.5;
@@ -256,6 +267,11 @@ export class Player {
     // AI build box, etc.) — don't start the game or trigger movement.
     const el = document.activeElement;
     if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) {
+      return;
+    }
+    // Ignore keystrokes while any full-screen menu is open (mode select, avatar
+    // select, how-to-play). Don't auto-start the game behind the menu.
+    if (isAnyMenuOpen()) {
       return;
     }
     if (!this.controls.isLocked) {
