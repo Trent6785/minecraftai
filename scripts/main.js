@@ -298,12 +298,14 @@ cornerCamera.layers.enable(0);
 cornerCamera.layers.enable(SELF_LAYER);
 
 let _selfAvatarCreated = false;
+let _selfAvatarType = 'steve';
 function createSelfAvatar() {
   if (_selfAvatarCreated) return;
   _selfAvatarCreated = true;
+  _selfAvatarType = getSelfAvatarType();
   import('./avatar').then(({ Avatar }) => {
     // Use whatever avatar the player picked (default steve).
-    selfAvatar = new Avatar(scene, getSelfAvatarType(), player.height);
+    selfAvatar = new Avatar(scene, _selfAvatarType, player.height);
     // Put the avatar's meshes on the self layer once it loads.
     const setLayer = () => {
       if (selfAvatar && selfAvatar.root) {
@@ -357,7 +359,10 @@ function updateCornerView(dt) {
   // directly is unreliable — use the world direction vector instead.
   player.camera.getWorldDirection(_lookDir);
   const yaw = Math.atan2(_lookDir.x, _lookDir.z);
-  const feetY = player.position.y - player.height;
+  // Feet position. Per-avatar nudge: if a model sits too low/high in the
+  // corner view, adjust its value here (positive = up).
+  const SELF_Y_OFFSET = { steve: 0, alex: 0.15 };
+  const feetY = player.position.y - player.height + (SELF_Y_OFFSET[_selfAvatarType] || 0);
 
   // Detect real movement (horizontal distance moved this frame).
   const dx = player.position.x - _lastSelfPos.x;
