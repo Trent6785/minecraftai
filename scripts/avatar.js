@@ -68,6 +68,11 @@ export class Avatar {
       model.position.x -= (box2.min.x + box2.max.x) / 2; // center horizontally
       model.position.z -= (box2.min.z + box2.max.z) / 2;
 
+      // Per-model fine-tune: some rigs sit slightly low. Nudge up if needed.
+      // If a model sinks into the ground, increase its offset here.
+      const GROUND_OFFSET = { steve: 0, alex: 0.12 };
+      model.position.y += (GROUND_OFFSET[this.type] || 0);
+
       model.traverse((o) => {
         if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; }
       });
