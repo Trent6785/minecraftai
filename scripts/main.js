@@ -266,7 +266,7 @@ window.addEventListener('mousedown', (e) => {
     const door = doorManager.doorForMesh(hits[0].object);
     if (door) {
       doorManager.toggle(door);
-      sounds.play(door.open ? 'place' : 'break', 0.4);
+      sounds.play('door', 0.5);
       // Sync the new open/closed state to other players.
       syncDoorState(door.x, door.y, door.z, door.open);
     }
@@ -462,14 +462,28 @@ async function startSpectatorMode(code) {
   }
 }
 
+// Disable the Play button until a name is entered.
+const playBtn = document.getElementById('btn-play');
+const nameInputEl = document.getElementById('player-name-input');
+function updatePlayEnabled() {
+  const hasName = nameInputEl && nameInputEl.value.trim().length > 0;
+  playBtn.disabled = !hasName;
+  playBtn.style.opacity = hasName ? '1' : '0.5';
+  playBtn.style.cursor = hasName ? 'pointer' : 'not-allowed';
+}
+nameInputEl.addEventListener('input', updatePlayEnabled);
+updatePlayEnabled(); // initial state (disabled)
+
 // "Play" button on the avatar screen — start the chosen mode.
 document.getElementById('btn-play').addEventListener('click', async () => {
+  // Guard: don't proceed without a name (shouldn't happen if button disabled).
+  const name = nameInputEl && nameInputEl.value.trim();
+  if (!name) {
+    nameInputEl.focus();
+    return;
+  }
+  setMyName(name);
   avatarMenu.style.display = 'none';
-
-  // Capture the entered name (defaults to Player).
-  const nameInput = document.getElementById('player-name-input');
-  setMyName(nameInput && nameInput.value.trim() ? nameInput.value.trim() : 'Player');
-
 
   if (gameMode === 'multiplayer') {
     // Shared seed: first player sets it (and becomes host), others read it.
