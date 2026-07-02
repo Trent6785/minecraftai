@@ -359,9 +359,12 @@ function updateCornerView(dt) {
   // directly is unreliable — use the world direction vector instead.
   player.camera.getWorldDirection(_lookDir);
   const yaw = Math.atan2(_lookDir.x, _lookDir.z);
-  // Feet position. Per-avatar nudge: if a model sits too low/high in the
-  // corner view, adjust its value here (positive = up).
-  const SELF_Y_OFFSET = { steve: 0, alex: 0.15 };
+  // Feet position. Per-avatar nudge (positive = up).
+  const SELF_Y_OFFSET = { steve: 0, alex: 1.0 }; // TEMP: large value to test
+  if (!window._loggedAvatarType) {
+    console.log('[self-avatar] type =', _selfAvatarType, 'offset =', SELF_Y_OFFSET[_selfAvatarType]);
+    window._loggedAvatarType = true;
+  }
   const feetY = player.position.y - player.height + (SELF_Y_OFFSET[_selfAvatarType] || 0);
 
   // Detect real movement (horizontal distance moved this frame).
