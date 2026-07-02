@@ -297,18 +297,23 @@ const cornerCamera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
 cornerCamera.layers.enable(0);
 cornerCamera.layers.enable(SELF_LAYER);
 
-import('./avatar').then(({ Avatar }) => {
-  // Use whatever avatar the player picked (default steve).
-  selfAvatar = new Avatar(scene, getSelfAvatarType(), player.height);
-  // Put the avatar's meshes on the self layer once it loads.
-  const setLayer = () => {
-    if (selfAvatar && selfAvatar.root) {
-      selfAvatar.root.traverse((o) => o.layers.set(SELF_LAYER));
-    }
-  };
-  // Retry briefly until the model has loaded.
-  const iv = setInterval(() => { if (selfAvatar && selfAvatar.ready) { setLayer(); clearInterval(iv); } }, 100);
-});
+let _selfAvatarCreated = false;
+function createSelfAvatar() {
+  if (_selfAvatarCreated) return;
+  _selfAvatarCreated = true;
+  import('./avatar').then(({ Avatar }) => {
+    // Use whatever avatar the player picked (default steve).
+    selfAvatar = new Avatar(scene, getSelfAvatarType(), player.height);
+    // Put the avatar's meshes on the self layer once it loads.
+    const setLayer = () => {
+      if (selfAvatar && selfAvatar.root) {
+        selfAvatar.root.traverse((o) => o.layers.set(SELF_LAYER));
+      }
+    };
+    // Retry briefly until the model has loaded.
+    const iv = setInterval(() => { if (selfAvatar && selfAvatar.ready) { setLayer(); clearInterval(iv); } }, 100);
+  });
+}
 
 function getSelfAvatarType() {
   // Mirror the avatar chosen in the picker (falls back to steve).
@@ -513,6 +518,7 @@ document.getElementById('btn-play').addEventListener('click', async () => {
 });
 
 function enterGame() {
+  createSelfAvatar(); // build the self-avatar using the picked character
   document.getElementById('overlay').style.visibility = 'visible';
 }
 
